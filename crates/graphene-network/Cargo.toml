@@ -1,0 +1,15 @@
+[package]
+name = "graphene-network"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+graphene-core.workspace = true
+futures-util.workspace = true
+reqwest.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+tracing.workspace = true

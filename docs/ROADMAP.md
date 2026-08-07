@@ -4,6 +4,8 @@ This roadmap defines implementation order and measurable phase exits.
 
 ## Phase 0 — Foundation
 
+> Detailed implementation specification: [`PHASE_0_IMPLEMENTATION_PLAN.md`](PHASE_0_IMPLEMENTATION_PLAN.md)
+
 ### Build
 
 - Cargo workspace;

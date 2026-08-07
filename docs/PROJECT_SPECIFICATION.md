@@ -1453,6 +1453,8 @@ Fuzz targets should prioritize untrusted parsers:
 
 ### Phase 0 — Foundation
 
+> The normative detailed implementation plan for this phase is [`PHASE_0_IMPLEMENTATION_PLAN.md`](PHASE_0_IMPLEMENTATION_PLAN.md).
+
 **Implement**
 
 - workspace skeleton;

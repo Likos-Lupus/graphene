@@ -1,0 +1,14 @@
+[package]
+name = "graphene-service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+graphene-core.workspace = true
+graphene-platform.workspace = true
+graphene-network.workspace = true
+graphene-storage.workspace = true
+tokio.workspace = true
+tracing.workspace = true

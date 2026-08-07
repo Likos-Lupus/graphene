@@ -16,6 +16,8 @@ Start here:
   rules.
 - [`docs/SCOPE_AND_BOUNDARIES.md`](docs/SCOPE_AND_BOUNDARIES.md) — explicit ownership and non-goals.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — phased implementation order and exit criteria.
+- [`docs/PHASE_0_IMPLEMENTATION_PLAN.md`](docs/PHASE_0_IMPLEMENTATION_PLAN.md) — detailed Phase 0
+  foundation implementation plan, contracts, testing, CI, and exit criteria.
 - [`docs/TARGET_DELIVERABLE.md`](docs/TARGET_DELIVERABLE.md) — what a complete Graphene backend must
   provide.
 - [
