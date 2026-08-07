@@ -15,7 +15,7 @@ pub use progress::Progress;
 pub use state::OperationState;
 
 use crate::{ErrorCode, ErrorKind, ErrorSummary, GrapheneError, OperationId, Result};
-use event::{terminal_event_kind, Subscriber};
+use event::{Subscriber, terminal_event_kind};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,

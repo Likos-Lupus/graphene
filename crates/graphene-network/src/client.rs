@@ -1,4 +1,4 @@
-use crate::{retry::retryable_status, verify_transfer, NetworkConfig, ProxyPolicy};
+use crate::{NetworkConfig, ProxyPolicy, retry::retryable_status, verify_transfer};
 use futures_util::StreamExt;
 use graphene_core::{
     Artifact, ArtifactId, ArtifactSource, CancellationToken, ErrorCode, ErrorKind, GrapheneError,

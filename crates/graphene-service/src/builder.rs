@@ -1,4 +1,4 @@
-use crate::{context::ServiceContext, ArtifactService, OperationService};
+use crate::{ArtifactService, OperationService, context::ServiceContext};
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, OperationRegistry, Result};
 use graphene_network::{NetworkClient, NetworkConfig};
 use graphene_platform::{Architecture, OperatingSystem, Platform};

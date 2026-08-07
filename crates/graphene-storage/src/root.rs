@@ -1,15 +1,15 @@
 use crate::{
-    atomic::write_new_atomic,
-    layout::{LayoutMarker, DIRECTORIES, LAYOUT_VERSION, MARKER_FILE},
-    temp::download_temp_path,
     CacheAddress,
+    atomic::write_new_atomic,
+    layout::{DIRECTORIES, LAYOUT_VERSION, LayoutMarker, MARKER_FILE},
+    temp::download_temp_path,
 };
 use graphene_core::{
     ArtifactId, ArtifactIntegrity, ErrorCode, ErrorKind, GrapheneError, OperationId, Result,
 };
 use graphene_platform::{
-    ensure_directory, ensure_managed_directory, normalize_root, replace_file_safely,
-    ManagedRelativePath,
+    ManagedRelativePath, ensure_directory, ensure_managed_directory, normalize_root,
+    replace_file_safely,
 };
 use std::{
     fs,

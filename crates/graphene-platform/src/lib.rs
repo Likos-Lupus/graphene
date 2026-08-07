@@ -11,7 +11,7 @@ mod paths;
 pub use arch::Architecture;
 pub use filesystem::{ensure_directory, ensure_managed_directory, replace_file_safely};
 pub use os::OperatingSystem;
-pub use paths::{normalize_root, ManagedRelativePath};
+pub use paths::{ManagedRelativePath, normalize_root};
 
 /// Normalized platform information captured when an engine is built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

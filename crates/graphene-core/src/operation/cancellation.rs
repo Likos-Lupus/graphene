@@ -2,8 +2,8 @@ use std::{
     future::Future,
     pin::Pin,
     sync::{
-        atomic::{AtomicU8, Ordering}, Arc, Mutex,
-        Weak,
+        Arc, Mutex, Weak,
+        atomic::{AtomicU8, Ordering},
     },
     task::{Context, Poll, Waker},
 };
