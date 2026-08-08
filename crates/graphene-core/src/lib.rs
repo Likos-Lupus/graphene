@@ -9,17 +9,19 @@ mod error;
 mod hash;
 mod id;
 pub mod operation;
+mod secret;
 
 pub use artifact::{Artifact, ArtifactIntegrity, ArtifactKind, ArtifactSource, CachePolicy};
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticParameters, DiagnosticSeverity};
 pub use error::{ErrorCode, ErrorContext, ErrorKind, ErrorSummary, GrapheneError};
 pub use hash::{HashParseError, Sha1Digest, Sha256Digest};
-pub use id::{ArtifactId, IdParseError, OperationId};
+pub use id::{ArtifactId, IdParseError, InstanceId, OperationId};
 pub use operation::{
     CancellationToken, OperationController, OperationEvent, OperationEventKind,
     OperationEventStream, OperationHandle, OperationRegistry, OperationResult, OperationSnapshot,
     OperationState, Progress,
 };
+pub use secret::SensitiveString;
 
 /// Graphene's common result type.
 pub type Result<T> = std::result::Result<T, GrapheneError>;

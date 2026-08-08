@@ -27,6 +27,12 @@ macro_rules! typed_id {
             pub fn new() -> Self {
                 Self(Uuid::new_v4())
             }
+
+            /// Constructs a deterministic identifier from 16 stable bytes.
+            #[must_use]
+            pub const fn from_bytes(bytes: [u8; 16]) -> Self {
+                Self(Uuid::from_bytes(bytes))
+            }
         }
 
         impl Default for $name {
@@ -59,6 +65,7 @@ macro_rules! typed_id {
 
 typed_id!(OperationId);
 typed_id!(ArtifactId);
+typed_id!(InstanceId);
 
 #[cfg(test)]
 mod tests {
@@ -73,5 +80,9 @@ mod tests {
         let artifact = ArtifactId::new();
         let parsed: ArtifactId = artifact.to_string().parse().expect("valid artifact id");
         assert_eq!(artifact, parsed);
+
+        let instance = InstanceId::new();
+        let parsed: InstanceId = instance.to_string().parse().expect("valid instance id");
+        assert_eq!(instance, parsed);
     }
 }

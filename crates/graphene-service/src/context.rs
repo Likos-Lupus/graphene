@@ -1,6 +1,7 @@
 use graphene_core::OperationRegistry;
 use graphene_network::NetworkClient;
 use graphene_platform::Platform;
+use graphene_providers::MojangProviderConfig;
 use graphene_storage::DataRoot;
 use std::{
     collections::HashMap,
@@ -14,6 +15,7 @@ pub(crate) struct ServiceContext {
     pub storage: DataRoot,
     pub network: NetworkClient,
     pub operations: OperationRegistry,
+    pub provider_config: MojangProviderConfig,
     pub artifact_gates: Mutex<HashMap<PathBuf, Weak<AsyncMutex<()>>>>,
 }
 

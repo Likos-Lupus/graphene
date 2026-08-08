@@ -1,6 +1,7 @@
 /// Normalized CPU architecture identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Architecture {
+    X86,
     X86_64,
     AArch64,
     Other,
@@ -10,7 +11,9 @@ impl Architecture {
     /// Detects the compile target architecture.
     #[must_use]
     pub const fn current() -> Self {
-        if cfg!(target_arch = "x86_64") {
+        if cfg!(target_arch = "x86") {
+            Self::X86
+        } else if cfg!(target_arch = "x86_64") {
             Self::X86_64
         } else if cfg!(target_arch = "aarch64") {
             Self::AArch64
@@ -23,6 +26,7 @@ impl Architecture {
     #[must_use]
     pub fn normalize(value: &str) -> Self {
         match value.to_ascii_lowercase().as_str() {
+            "x86" | "i386" | "i686" => Self::X86,
             "x86_64" | "amd64" => Self::X86_64,
             "aarch64" | "arm64" => Self::AArch64,
             _ => Self::Other,

@@ -1,0 +1,16 @@
+[package]
+name = "graphene-launch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+graphene-core.workspace = true
+graphene-minecraft.workspace = true
+graphene-instance.workspace = true
+graphene-java.workspace = true
+graphene-platform.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

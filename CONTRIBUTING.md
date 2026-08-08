@@ -27,6 +27,8 @@ Graphene uses architecture rules as part of the contribution contract.
 21. Pack formats normalize into one install model.
 22. Repair reuses installation execution primitives.
 23. Architectural exceptions require an ADR.
+24. Crate roots are public facades, not business-logic containers. New domain behavior should live
+    in cohesive internal modules and be re-exported deliberately.
 
 ## Review Questions
 

@@ -1,0 +1,17 @@
+{
+  "latest": {
+    "release": "1.21.1",
+    "snapshot": "1.21.1"
+  },
+  "versions": [
+    {
+      "complianceLevel": 1,
+      "id": "1.21.1",
+      "releaseTime": "2024-08-08T00:00:00Z",
+      "sha1": "b488988e1fe0460d188a92d38ee122f8058796eb",
+      "size": 2687,
+      "type": "release",
+      "url": "https://fixture.invalid/minecraft/1.21.1-traversal.json"
+    }
+  ]
+}

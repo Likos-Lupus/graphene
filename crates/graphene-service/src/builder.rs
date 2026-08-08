@@ -1,7 +1,11 @@
-use crate::{ArtifactService, OperationService, context::ServiceContext};
+use crate::{
+    ArtifactService, InstallService, JavaService, LaunchService, MinecraftService,
+    OperationService, context::ServiceContext,
+};
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, OperationRegistry, Result};
 use graphene_network::{NetworkClient, NetworkConfig};
 use graphene_platform::{Architecture, OperatingSystem, Platform};
+use graphene_providers::MojangProviderConfig;
 use graphene_storage::DataRoot;
 use std::{
     path::{Path, PathBuf},
@@ -64,6 +68,30 @@ impl Graphene {
     pub fn artifacts(&self) -> ArtifactService {
         ArtifactService::new(Arc::clone(&self.context))
     }
+
+    /// Returns the official-compatible Minecraft metadata service.
+    #[must_use]
+    pub fn minecraft(&self) -> MinecraftService {
+        MinecraftService::new(Arc::clone(&self.context))
+    }
+
+    /// Returns deterministic Phase 1 install planning/execution.
+    #[must_use]
+    pub fn install(&self) -> InstallService {
+        InstallService::new(Arc::clone(&self.context))
+    }
+
+    /// Returns local Java discovery/probe/selection.
+    #[must_use]
+    pub fn java(&self) -> JavaService {
+        JavaService::new(Arc::clone(&self.context))
+    }
+
+    /// Returns offline launch planning and direct process execution.
+    #[must_use]
+    pub fn launch(&self) -> LaunchService {
+        LaunchService::new(Arc::clone(&self.context))
+    }
 }
 
 /// Validating constructor for a fully initialized Graphene engine.
@@ -72,16 +100,18 @@ pub struct GrapheneBuilder {
     data_root: PathBuf,
     network: NetworkConfig,
     event_channel_capacity: usize,
+    provider_config: MojangProviderConfig,
 }
 
 impl GrapheneBuilder {
-    /// Creates a builder with conservative Phase 0 defaults.
+    /// Creates a builder with conservative foundation and Phase 1 defaults.
     #[must_use]
     pub fn new(data_root: impl Into<PathBuf>) -> Self {
         Self {
             data_root: data_root.into(),
             network: NetworkConfig::default(),
             event_channel_capacity: 256,
+            provider_config: MojangProviderConfig::default(),
         }
     }
 
@@ -92,6 +122,14 @@ impl GrapheneBuilder {
         self
     }
 
+    /// Replaces the narrow Mojang endpoint configuration. Production callers should normally keep
+    /// the official HTTPS default; fixture configuration exists for deterministic local tests.
+    #[must_use]
+    pub fn minecraft_provider(mut self, provider_config: MojangProviderConfig) -> Self {
+        self.provider_config = provider_config;
+        self
+    }
+
     /// Sets bounded per-subscription operation event capacity.
     #[must_use]
     pub const fn event_channel_capacity(mut self, capacity: usize) -> Self {
@@ -99,7 +137,7 @@ impl GrapheneBuilder {
         self
     }
 
-    /// Validates configuration, initializes storage, and constructs every shared Phase 0 service.
+    /// Validates configuration, initializes storage, and constructs the shared foundation and Phase 1 services.
     /// A partially initialized [`Graphene`] is never returned.
     pub async fn build(self) -> Result<Graphene> {
         if !(4..=65_536).contains(&self.event_channel_capacity) {
@@ -115,6 +153,7 @@ impl GrapheneBuilder {
         }
 
         self.network.validate()?;
+        self.provider_config.validate()?;
         let platform = Platform::current();
         let storage = DataRoot::initialize(&self.data_root)?;
         let network = NetworkClient::new(self.network)?;
@@ -131,6 +170,7 @@ impl GrapheneBuilder {
             storage,
             network,
             operations,
+            provider_config: self.provider_config,
             artifact_gates: std::sync::Mutex::new(std::collections::HashMap::new()),
         });
 

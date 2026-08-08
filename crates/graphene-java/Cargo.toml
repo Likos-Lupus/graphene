@@ -1,0 +1,12 @@
+[package]
+name = "graphene-java"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+graphene-core.workspace = true
+graphene-platform.workspace = true
+serde.workspace = true
+tokio.workspace = true

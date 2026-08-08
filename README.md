@@ -2,9 +2,10 @@
 
 Graphene is a planned **UI-independent Minecraft: Java Edition launcher engine** written in Rust.
 
-The current repository is intentionally at the architecture/foundation stage. The first
-implementation target is a complete Vanilla install-to-launch vertical slice. Tauri, Slint, CLI, and
-other hosts are consumers of the engine rather than part of its domain.
+The repository contains the Phase 0 foundation and the Phase 1 Vanilla install-to-launch engine
+implementation. Tauri, Slint, CLI, and other hosts are consumers of the engine rather than part of
+its domain. Phase 1 remains UI-independent and intentionally excludes authentication providers,
+loaders, managed Java downloads, content catalogs, and modpacks.
 
 ## Architecture Baseline
 
@@ -18,13 +19,20 @@ Start here:
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — phased implementation order and exit criteria.
 - [`docs/PHASE_0_IMPLEMENTATION_PLAN.md`](docs/PHASE_0_IMPLEMENTATION_PLAN.md) — detailed Phase 0
   foundation implementation plan, contracts, testing, CI, and exit criteria.
+- [`docs/PHASE_1_IMPLEMENTATION_PLAN.md`](docs/PHASE_1_IMPLEMENTATION_PLAN.md) — normative Vanilla
+  install-to-launch scope, workstreams, tests, security requirements, and exit criteria.
+- [`docs/PHASE_1_API.md`](docs/PHASE_1_API.md) — implemented Phase 1 public behavior.
+- [`docs/PHASE_1_SECURITY_REVIEW.md`](docs/PHASE_1_SECURITY_REVIEW.md) — Phase 1 security review and
+  explicit validation limitations.
+- [`docs/PHASE_1_SMOKE_TEST.md`](docs/PHASE_1_SMOKE_TEST.md) — required real Vanilla sign-off
+  procedure and execution record.
 - [`docs/TARGET_DELIVERABLE.md`](docs/TARGET_DELIVERABLE.md) — what a complete Graphene backend must
   provide.
 - [
   `docs/adr/0001-ui-independent-launcher-engine.md`](docs/adr/0001-ui-independent-launcher-engine.md) —
   initial architecture decision.
 
-## First Engineering Target
+## Phase 1 Vertical Slice
 
 ```text
 Minecraft metadata
@@ -48,8 +56,10 @@ LaunchPlan
 Minecraft process
 ```
 
-The first major milestone is achieved when a clean Graphene data directory can install and launch a
-Vanilla Minecraft instance without any UI framework dependency.
+The Phase 1 implementation targets this complete path with frozen local fixtures, transactional
+create-only publication, local Java probing, offline launch planning, direct process execution, and
+bounded lifecycle/output events. Phase completion still requires every exit-checklist validation to
+run successfully; documentation does not substitute for those executable gates.
 
 ## Architectural Rule of Thumb
 

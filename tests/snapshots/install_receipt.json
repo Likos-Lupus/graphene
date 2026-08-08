@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "install_format_version": 1,
+  "instance_id": "71717171-7171-7171-7171-717171717171",
+  "requested_version": "1.21.1",
+  "resolved_version": "1.21.1",
+  "version_type": "release",
+  "main_class": "com.example.graphene.FixtureMain",
+  "java_major": 21,
+  "java_component": "java-runtime-delta",
+  "client": ".minecraft/versions/1.21.1/1.21.1.jar",
+  "libraries": [
+    {
+      "coordinate": "com.example:fixture-lib:1.0",
+      "classpath": "shared/libraries/com/example/fixture-lib/1.0/fixture-lib-1.0.jar",
+      "native": null
+    },
+    {
+      "coordinate": "com.example:fixture-native:1.0",
+      "classpath": null,
+      "native": "shared/libraries/com/example/fixture-native/1.0/fixture-native-1.0-<native-classifier>.jar"
+    }
+  ],
+  "asset_index_id": "1.21.1-fixture",
+  "asset_index": "shared/assets/indexes/1.21.1-fixture.json",
+  "assets_root": "shared/assets",
+  "natives_directory": ".graphene/natives/1.21.1",
+  "logging": "shared/metadata/logging/log4j2.xml",
+  "logging_argument": "-Dlog4j.configurationFile=${path}",
+  "jvm_arguments": [
+    {
+      "values": [
+        "-Djava.library.path=${natives_directory}"
+      ]
+    },
+    {
+      "values": [
+        "-Dminecraft.launcher.brand=${launcher_name}"
+      ]
+    },
+    {
+      "values": [
+        "-Dminecraft.launcher.version=${launcher_version}"
+      ]
+    },
+    {
+      "values": [
+        "-Dfixture.os=linux"
+      ],
+      "rule_count": 1
+    },
+    {
+      "values": [
+        "-Dfixture.os=windows"
+      ],
+      "rule_count": 1
+    },
+    {
+      "values": [
+        "-Dfixture.os=osx"
+      ],
+      "rule_count": 1
+    },
+    {
+      "values": [
+        "-cp"
+      ]
+    },
+    {
+      "values": [
+        "${classpath}"
+      ]
+    }
+  ],
+  "game_arguments": [
+    {
+      "values": [
+        "--username"
+      ]
+    },
+    {
+      "values": [
+        "${auth_player_name}"
+      ]
+    },
+    {
+      "values": [
+        "--version"
+      ]
+    },
+    {
+      "values": [
+        "${version_name}"
+      ]
+    },
+    {
+      "values": [
+        "--gameDir"
+      ]
+    },
+    {
+      "values": [
+        "${game_directory}"
+      ]
+    },
+    {
+      "values": [
+        "--assetsDir"
+      ]
+    },
+    {
+      "values": [
+        "${assets_root}"
+      ]
+    },
+    {
+      "values": [
+        "--assetIndex"
+      ]
+    },
+    {
+      "values": [
+        "${assets_index_name}"
+      ]
+    },
+    {
+      "values": [
+        "--uuid"
+      ]
+    },
+    {
+      "values": [
+        "${auth_uuid}"
+      ]
+    },
+    {
+      "values": [
+        "--accessToken"
+      ]
+    },
+    {
+      "values": [
+        "${auth_access_token}"
+      ]
+    },
+    {
+      "values": [
+        "--userType"
+      ]
+    },
+    {
+      "values": [
+        "${user_type}"
+      ]
+    },
+    {
+      "values": [
+        "--versionType"
+      ]
+    },
+    {
+      "values": [
+        "${version_type}"
+      ]
+    },
+    {
+      "values": [
+        "--width",
+        "${resolution_width}",
+        "--height",
+        "${resolution_height}"
+      ],
+      "rule_count": 1
+    }
+  ]
+}

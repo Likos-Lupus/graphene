@@ -162,3 +162,46 @@ Before merging a new dependency between crates, answer:
 7. Does it create or approach a dependency cycle?
 
 If any answer indicates boundary leakage, redesign before merging.
+
+## 10. Phase 1 Activated Dependency Graph
+
+Phase 1 activates the Vanilla install-to-launch contexts without changing the inward dependency
+rule. The mechanically enforced internal graph is:
+
+```text
+graphene-minecraft -> graphene-core
+
+graphene-instance  -> graphene-core
+
+graphene-platform  -> graphene-core
+
+graphene-network   -> graphene-core
+
+graphene-java      -> graphene-core + graphene-platform
+
+graphene-providers -> graphene-core + graphene-network + graphene-minecraft
+
+graphene-storage   -> graphene-core + graphene-platform
+
+graphene-install   -> graphene-core + graphene-minecraft + graphene-instance
+                   + graphene-storage + graphene-platform
+
+graphene-launch    -> graphene-core + graphene-minecraft + graphene-instance
+                   + graphene-java + graphene-platform
+
+graphene-service   -> all activated backend contexts for composition only
+
+graphene (facade)  -> curated Graphene-owned context/service APIs
+```
+
+`graphene-install` owns the `ArtifactAcquirer` port; `graphene-service` implements the adapter to
+the Phase 0 `ArtifactService`. This keeps the verified transport/cache pipeline reusable without a
+reverse service dependency. See ADR-0003.
+
+Phase 1 committed instances use a staged create-only publication transaction and a provider-neutral
+schema-versioned install receipt. See ADR-0004. Java/Minecraft processes are direct-argv and their
+Tokio implementation handles remain private. See ADR-0005.
+
+The architecture checker rejects direct Reqwest dependencies outside `graphene-network`, provider
+DTO leakage, backend UI dependencies, forbidden Phase 1 edges, cycles, and root-facade provider
+parsing.
