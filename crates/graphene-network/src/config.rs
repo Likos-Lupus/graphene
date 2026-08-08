@@ -142,15 +142,19 @@ mod tests {
 
     #[test]
     fn invalid_zero_limits_are_rejected() {
-        let mut config = NetworkConfig::default();
-        config.max_concurrent_downloads = 0;
+        let config = NetworkConfig {
+            max_concurrent_downloads: 0,
+            ..NetworkConfig::default()
+        };
         assert_eq!(
             config.validate().expect_err("invalid").code,
             ErrorCode::ConfigInvalid
         );
 
-        let mut config = NetworkConfig::default();
-        config.redirect_policy.max_redirects = 0;
+        let config = NetworkConfig {
+            redirect_policy: RedirectPolicy { max_redirects: 0 },
+            ..NetworkConfig::default()
+        };
         assert_eq!(
             config.validate().expect_err("invalid").code,
             ErrorCode::ConfigInvalid
@@ -168,15 +172,19 @@ mod tests {
 
     #[test]
     fn malformed_proxy_and_user_agent_are_rejected_during_validation() {
-        let mut proxy = NetworkConfig::default();
-        proxy.proxy = ProxyPolicy::Explicit("not a proxy url".into());
+        let proxy = NetworkConfig {
+            proxy: ProxyPolicy::Explicit("not a proxy url".into()),
+            ..NetworkConfig::default()
+        };
         assert_eq!(
             proxy.validate().expect_err("invalid proxy").code,
             ErrorCode::NetworkProxyInvalid
         );
 
-        let mut user_agent = NetworkConfig::default();
-        user_agent.user_agent = "graphene\ninvalid".into();
+        let user_agent = NetworkConfig {
+            user_agent: "graphene\ninvalid".into(),
+            ..NetworkConfig::default()
+        };
         assert_eq!(
             user_agent.validate().expect_err("invalid user agent").code,
             ErrorCode::ConfigInvalid

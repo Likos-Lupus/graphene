@@ -29,9 +29,10 @@ fn slow_bytes() -> Vec<u8> {
 }
 
 fn local_network() -> NetworkConfig {
-    let mut config = NetworkConfig::default();
-    config.proxy = ProxyPolicy::None;
-    config
+    NetworkConfig {
+        proxy: ProxyPolicy::None,
+        ..NetworkConfig::default()
+    }
 }
 
 struct FixtureServer {

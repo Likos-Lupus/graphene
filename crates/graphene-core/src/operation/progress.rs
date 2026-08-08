@@ -2,17 +2,18 @@ use crate::{ErrorCode, ErrorKind, GrapheneError, Result};
 use serde::{Deserialize, Serialize};
 
 /// UI-neutral progress value for a long-running operation stage.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Progress {
+    #[default]
     Indeterminate,
-    Items { completed: u64, total: Option<u64> },
-    Bytes { completed: u64, total: Option<u64> },
-}
-
-impl Default for Progress {
-    fn default() -> Self {
-        Self::Indeterminate
-    }
+    Items {
+        completed: u64,
+        total: Option<u64>,
+    },
+    Bytes {
+        completed: u64,
+        total: Option<u64>,
+    },
 }
 
 impl Progress {
