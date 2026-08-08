@@ -374,7 +374,7 @@ impl NetworkClient {
                 chunk = stream.next() => chunk,
             };
             let Some(chunk) = chunk else { break };
-            let chunk = chunk.map_err(classify_reqwest_error)?;
+            let chunk = chunk.map_err(classify_response_body_error)?;
 
             file.write_all(&chunk).await.map_err(|source_error| {
                 AttemptError::non_retryable(
@@ -574,6 +574,33 @@ fn classify_reqwest_error(source: reqwest::Error) -> AttemptError {
             "network request failed",
         ),
         retryable,
+    }
+}
+
+fn classify_response_body_error(source: reqwest::Error) -> AttemptError {
+    if source.is_timeout() {
+        return AttemptError {
+            error: GrapheneError::new(
+                ErrorCode::NetworkTimeout,
+                ErrorKind::Timeout,
+                "network response body timed out",
+            ),
+            retryable: true,
+        };
+    }
+
+    // At this point a successful HTTP response has already started streaming. Any reqwest error
+    // produced by the response body means the transfer was interrupted or otherwise incomplete.
+    // Treat it as transient and let the bounded retry policy decide whether another attempt is
+    // allowed. Integrity and size failures are classified separately after streaming and remain
+    // non-retryable.
+    AttemptError {
+        error: GrapheneError::new(
+            ErrorCode::NetworkRequestFailed,
+            ErrorKind::Network,
+            "network response body failed while streaming",
+        ),
+        retryable: true,
     }
 }
 
