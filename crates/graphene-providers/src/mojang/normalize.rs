@@ -285,12 +285,6 @@ pub(super) fn normalize_asset_index(
     let mut objects = Vec::with_capacity(dto.objects.len());
     for (logical_name, object) in dto.objects {
         bounded_string(&logical_name, "asset logical name")?;
-        if logical_name.contains('\0') || logical_name.len() > MAX_STRING_BYTES {
-            return Err(mc_error(
-                ErrorCode::MinecraftAssetIndexInvalid,
-                "asset logical name is invalid",
-            ));
-        }
 
         let digest = parse_sha1_for(
             &object.hash,

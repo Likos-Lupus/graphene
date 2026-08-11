@@ -3,8 +3,13 @@
 //! Provider DTOs remain private inside the Mojang adapter. The crate root deliberately exposes
 //! only Graphene-facing provider configuration, acquisition ports, and normalized results.
 
+mod java_distribution;
+mod microsoft;
 mod mojang;
 
 pub use mojang::{
     MetadataArtifactAcquirer, MojangProvider, MojangProviderConfig, ResolvedMinecraftBundle,
 };
+
+pub use java_distribution::{AdoptiumProvider, AdoptiumProviderConfig};
+pub use microsoft::{MicrosoftAuthConfig, MicrosoftAuthProvider, MicrosoftServiceEndpoints};

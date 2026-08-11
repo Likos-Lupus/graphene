@@ -15,7 +15,7 @@ pub use artifact::{Artifact, ArtifactIntegrity, ArtifactKind, ArtifactSource, Ca
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticParameters, DiagnosticSeverity};
 pub use error::{ErrorCode, ErrorContext, ErrorKind, ErrorSummary, GrapheneError};
 pub use hash::{HashParseError, Sha1Digest, Sha256Digest};
-pub use id::{ArtifactId, IdParseError, InstanceId, OperationId};
+pub use id::{AccountId, ArtifactId, IdParseError, InstanceId, ManagedRuntimeId, OperationId};
 pub use operation::{
     CancellationToken, OperationController, OperationEvent, OperationEventKind,
     OperationEventStream, OperationHandle, OperationRegistry, OperationResult, OperationSnapshot,

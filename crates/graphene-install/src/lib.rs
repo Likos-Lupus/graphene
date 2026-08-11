@@ -12,6 +12,7 @@ mod plan;
 mod request;
 
 pub use acquisition::{AcquiredArtifact, AcquisitionDisposition, ArtifactAcquirer};
+pub use archive::{extract_managed_tar_gz, extract_managed_zip};
 pub use executor::InstallExecutor;
 pub use plan::{
     INSTALL_PLAN_VERSION, InstallPlan, MAX_INSTALL_ARTIFACTS, Materialization,

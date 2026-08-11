@@ -9,10 +9,17 @@ pub(super) fn inflate_raw(
     expected: usize,
     cancellation: &CancellationToken,
 ) -> Result<Vec<u8>> {
-    if expected > MAX_ENTRY_BYTES {
-        return Err(archive_error(
-            "deflate output exceeds the native entry limit",
-        ));
+    inflate_raw_bounded(input, expected, MAX_ENTRY_BYTES, cancellation)
+}
+
+pub(super) fn inflate_raw_bounded(
+    input: &[u8],
+    expected: usize,
+    max_output: usize,
+    cancellation: &CancellationToken,
+) -> Result<Vec<u8>> {
+    if expected > max_output {
+        return Err(archive_error("deflate output exceeds its configured limit"));
     }
 
     let mut bits = BitReader::new(input);
@@ -24,13 +31,14 @@ pub(super) fn inflate_raw(
         let block_type = bits.read_bits(2)?;
 
         match block_type {
-            0 => inflate_stored(&mut bits, &mut output, expected, cancellation)?,
+            0 => inflate_stored(&mut bits, &mut output, expected, max_output, cancellation)?,
             1 => {
                 let (literal, distance) = fixed_trees()?;
                 inflate_codes(
                     &mut bits,
                     &mut output,
                     expected,
+                    max_output,
                     &literal,
                     &distance,
                     cancellation,
@@ -42,6 +50,7 @@ pub(super) fn inflate_raw(
                     &mut bits,
                     &mut output,
                     expected,
+                    max_output,
                     &literal,
                     &distance,
                     cancellation,
@@ -281,6 +290,7 @@ fn inflate_stored(
     bits: &mut BitReader<'_>,
     output: &mut Vec<u8>,
     expected: usize,
+    max_output: usize,
     cancellation: &CancellationToken,
 ) -> Result<()> {
     bits.align_byte();
@@ -295,7 +305,7 @@ fn inflate_stored(
     if output
         .len()
         .checked_add(count)
-        .is_none_or(|size| size > expected || size > MAX_ENTRY_BYTES)
+        .is_none_or(|size| size > expected || size > max_output)
     {
         return Err(archive_error("deflate stored block exceeds output bound"));
     }
@@ -314,6 +324,7 @@ fn inflate_codes(
     bits: &mut BitReader<'_>,
     output: &mut Vec<u8>,
     expected: usize,
+    max_output: usize,
     literals: &Huffman,
     distances: &Huffman,
     cancellation: &CancellationToken,
@@ -337,7 +348,7 @@ fn inflate_codes(
         checkpoint(cancellation)?;
         match literals.decode(bits)? {
             symbol @ 0..=255 => {
-                if output.len() >= expected || output.len() >= MAX_ENTRY_BYTES {
+                if output.len() >= expected || output.len() >= max_output {
                     return Err(archive_error("deflate literal exceeds output bound"));
                 }
                 output.push(symbol as u8);
@@ -362,7 +373,7 @@ fn inflate_codes(
                 if output
                     .len()
                     .checked_add(length)
-                    .is_none_or(|size| size > expected || size > MAX_ENTRY_BYTES)
+                    .is_none_or(|size| size > expected || size > max_output)
                 {
                     return Err(archive_error("deflate back-reference exceeds output bound"));
                 }

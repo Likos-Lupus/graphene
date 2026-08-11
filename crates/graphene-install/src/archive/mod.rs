@@ -1,4 +1,5 @@
 mod deflate;
+mod managed;
 mod zip;
 
 use self::zip::{central_entries, crc32, extract_entry};
@@ -111,6 +112,16 @@ pub(crate) fn extract_native_zip(
     }
     Ok(())
 }
+
+pub fn extract_managed_zip(
+    archive: &Path,
+    destination: &Path,
+    cancellation: &CancellationToken,
+) -> Result<()> {
+    extract_native_zip(archive, destination, cancellation)
+}
+
+pub use managed::extract_tar_gz as extract_managed_tar_gz;
 
 fn validate_entry_name(name: &str) -> Result<ManagedRelativePath> {
     let trimmed = name.trim_end_matches('/');
@@ -244,6 +255,63 @@ mod tests {
             let result = extract_native_zip(&fixture(name), &root, &CancellationToken::new());
             assert!(result.is_err(), "{name} unexpectedly extracted");
             fs::remove_dir_all(root).expect("cleanup");
+        }
+    }
+
+    fn managed_fixture(name: &str) -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/managed-java")
+            .join(name)
+    }
+
+    #[test]
+    fn frozen_managed_zip_and_tar_gz_fixtures_extract() {
+        for (name, tar_gz) in [("valid.zip", false), ("valid.tar.gz", true)] {
+            let root = temporary_directory(name);
+            let result = if tar_gz {
+                extract_managed_tar_gz(&managed_fixture(name), &root, &CancellationToken::new())
+            } else {
+                extract_managed_zip(&managed_fixture(name), &root, &CancellationToken::new())
+            };
+            result.expect("valid managed archive");
+            assert_eq!(
+                fs::read(root.join("runtime/bin/java")).expect("java fixture"),
+                b"fixture-java\n"
+            );
+            fs::remove_dir_all(root).expect("cleanup");
+        }
+    }
+
+    #[test]
+    fn frozen_hostile_managed_archives_never_escape_or_commit() {
+        let cases = [
+            ("traversal.zip", false),
+            ("absolute.zip", false),
+            ("backslash.zip", false),
+            ("symlink.zip", false),
+            ("oversized-entry.zip", false),
+            ("bomb-policy.zip", false),
+            ("corrupt.zip", false),
+            ("traversal.tar.gz", true),
+            ("absolute.tar.gz", true),
+            ("symlink.tar.gz", true),
+            ("hardlink.tar.gz", true),
+            ("oversized-entry.tar.gz", true),
+            ("bomb-policy.tar.gz", true),
+            ("corrupt.tar.gz", true),
+        ];
+        for (name, tar_gz) in cases {
+            let outer = temporary_directory(&format!("managed-hostile-{name}"));
+            let root = outer.join("extract");
+            fs::create_dir(&root).expect("create extraction root");
+            let result = if tar_gz {
+                extract_managed_tar_gz(&managed_fixture(name), &root, &CancellationToken::new())
+            } else {
+                extract_managed_zip(&managed_fixture(name), &root, &CancellationToken::new())
+            };
+            assert!(result.is_err(), "{name} unexpectedly extracted");
+            assert!(!outer.join("escape.txt").exists());
+            fs::remove_dir_all(outer).expect("cleanup");
         }
     }
 }

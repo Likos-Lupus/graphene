@@ -1,11 +1,15 @@
 use crate::{
-    ArtifactService, InstallService, JavaService, LaunchService, MinecraftService,
-    OperationService, context::ServiceContext,
+    AccountService, ArtifactService, InstallService, JavaService, LaunchService, MinecraftService,
+    OperationService, account_service::StorageAccountRepository, context::ServiceContext,
 };
+use graphene_auth::{SecretStore, UnavailableSecretStore};
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, OperationRegistry, Result};
 use graphene_network::{NetworkClient, NetworkConfig};
 use graphene_platform::{Architecture, OperatingSystem, Platform};
-use graphene_providers::MojangProviderConfig;
+use graphene_providers::{
+    AdoptiumProvider, AdoptiumProviderConfig, MicrosoftAuthConfig, MicrosoftAuthProvider,
+    MojangProviderConfig,
+};
 use graphene_storage::DataRoot;
 use std::{
     path::{Path, PathBuf},
@@ -63,6 +67,12 @@ impl Graphene {
         OperationService::new(Arc::clone(&self.context))
     }
 
+    /// Returns account/authentication orchestration.
+    #[must_use]
+    pub fn accounts(&self) -> AccountService {
+        AccountService::new(Arc::clone(&self.context))
+    }
+
     /// Returns the generic verified artifact acquisition service.
     #[must_use]
     pub fn artifacts(&self) -> ArtifactService {
@@ -75,13 +85,13 @@ impl Graphene {
         MinecraftService::new(Arc::clone(&self.context))
     }
 
-    /// Returns deterministic Phase 1 install planning/execution.
+    /// Returns deterministic install planning/execution.
     #[must_use]
     pub fn install(&self) -> InstallService {
         InstallService::new(Arc::clone(&self.context))
     }
 
-    /// Returns local Java discovery/probe/selection.
+    /// Returns local and managed Java selection/installation services.
     #[must_use]
     pub fn java(&self) -> JavaService {
         JavaService::new(Arc::clone(&self.context))
@@ -95,16 +105,33 @@ impl Graphene {
 }
 
 /// Validating constructor for a fully initialized Graphene engine.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GrapheneBuilder {
     data_root: PathBuf,
     network: NetworkConfig,
     event_channel_capacity: usize,
     provider_config: MojangProviderConfig,
+    microsoft_auth: Option<MicrosoftAuthConfig>,
+    secret_store: Arc<dyn SecretStore>,
+    java_provider_config: AdoptiumProviderConfig,
+}
+
+impl std::fmt::Debug for GrapheneBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GrapheneBuilder")
+            .field("data_root", &self.data_root)
+            .field("network", &self.network)
+            .field("event_channel_capacity", &self.event_channel_capacity)
+            .field("provider_config", &self.provider_config)
+            .field("microsoft_auth", &self.microsoft_auth)
+            .field("secret_store", &"<configured-backend>")
+            .field("java_provider_config", &self.java_provider_config)
+            .finish()
+    }
 }
 
 impl GrapheneBuilder {
-    /// Creates a builder with conservative foundation and Phase 1 defaults.
+    /// Creates a builder with conservative foundation and Phase 2 defaults.
     #[must_use]
     pub fn new(data_root: impl Into<PathBuf>) -> Self {
         Self {
@@ -112,6 +139,9 @@ impl GrapheneBuilder {
             network: NetworkConfig::default(),
             event_channel_capacity: 256,
             provider_config: MojangProviderConfig::default(),
+            microsoft_auth: None,
+            secret_store: Arc::new(UnavailableSecretStore),
+            java_provider_config: AdoptiumProviderConfig::default(),
         }
     }
 
@@ -130,6 +160,27 @@ impl GrapheneBuilder {
         self
     }
 
+    /// Configures a distributor-owned Microsoft application and provider endpoints.
+    #[must_use]
+    pub fn microsoft_auth(mut self, config: MicrosoftAuthConfig) -> Self {
+        self.microsoft_auth = Some(config);
+        self
+    }
+
+    /// Injects an explicit secure credential backend. No plaintext fallback is enabled implicitly.
+    #[must_use]
+    pub fn secret_store(mut self, store: Arc<dyn SecretStore>) -> Self {
+        self.secret_store = store;
+        self
+    }
+
+    /// Replaces the managed-Java reference-provider configuration.
+    #[must_use]
+    pub fn managed_java_provider(mut self, config: AdoptiumProviderConfig) -> Self {
+        self.java_provider_config = config;
+        self
+    }
+
     /// Sets bounded per-subscription operation event capacity.
     #[must_use]
     pub const fn event_channel_capacity(mut self, capacity: usize) -> Self {
@@ -137,7 +188,7 @@ impl GrapheneBuilder {
         self
     }
 
-    /// Validates configuration, initializes storage, and constructs the shared foundation and Phase 1 services.
+    /// Validates configuration, initializes storage, and constructs the shared foundation and Phase 2 services.
     /// A partially initialized [`Graphene`] is never returned.
     pub async fn build(self) -> Result<Graphene> {
         if !(4..=65_536).contains(&self.event_channel_capacity) {
@@ -154,10 +205,29 @@ impl GrapheneBuilder {
 
         self.network.validate()?;
         self.provider_config.validate()?;
+        if let Some(config) = &self.microsoft_auth {
+            config.validate()?;
+        }
+        self.java_provider_config.validate()?;
+
         let platform = Platform::current();
         let storage = DataRoot::initialize(&self.data_root)?;
         let network = NetworkClient::new(self.network)?;
         let operations = OperationRegistry::new(self.event_channel_capacity)?;
+        let account_repository = Arc::new(StorageAccountRepository::new(&storage)?);
+        let auth_provider = match self.microsoft_auth {
+            Some(config) => Some(
+                Arc::new(MicrosoftAuthProvider::new(network.clone(), config)?)
+                    as Arc<dyn graphene_auth::AuthProvider>,
+            ),
+            None => None,
+        };
+        let java_distribution_provider = Arc::new(AdoptiumProvider::new(
+            network.clone(),
+            self.java_provider_config,
+        )?)
+            as Arc<dyn graphene_java::JavaDistributionProvider>;
+
         debug!(
             module = "graphene-service",
             data_root = %storage.path().display(),
@@ -171,7 +241,13 @@ impl GrapheneBuilder {
             network,
             operations,
             provider_config: self.provider_config,
+            account_repository,
+            secret_store: self.secret_store,
+            auth_provider,
+            java_distribution_provider,
             artifact_gates: std::sync::Mutex::new(std::collections::HashMap::new()),
+            account_gates: std::sync::Mutex::new(std::collections::HashMap::new()),
+            runtime_gates: std::sync::Mutex::new(std::collections::HashMap::new()),
         });
 
         Ok(Graphene { context })

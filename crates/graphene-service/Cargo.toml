@@ -7,6 +7,7 @@ rust-version.workspace = true
 
 [dependencies]
 graphene-core.workspace = true
+graphene-auth.workspace = true
 graphene-platform.workspace = true
 graphene-network.workspace = true
 graphene-storage.workspace = true

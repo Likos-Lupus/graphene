@@ -39,14 +39,14 @@ mod tests {
         assert_eq!(
             minecraft_path_to_platform(&minecraft)
                 .expect("minecraft conversion")
-                .as_str(),
-            ".graphene/natives/fixture"
+                .as_path(),
+            std::path::Path::new(".graphene/natives/fixture")
         );
         assert_eq!(
             receipt_path_to_platform(&receipt)
                 .expect("receipt conversion")
-                .as_str(),
-            ".graphene/natives/fixture"
+                .as_path(),
+            std::path::Path::new(".graphene/natives/fixture")
         );
     }
 }

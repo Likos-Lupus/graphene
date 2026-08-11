@@ -29,6 +29,14 @@ Graphene uses architecture rules as part of the contribution contract.
 23. Architectural exceptions require an ADR.
 24. Crate roots are public facades, not business-logic containers. New domain behavior should live
     in cohesive internal modules and be re-exported deliberately.
+25. Authentication supplies the existing `LaunchSession` through service orchestration;
+    `graphene-launch` does not depend on authentication or provider crates.
+26. Persistent public account metadata never contains authentication credentials; secure secret
+    storage is a separate injected boundary and must fail closed rather than downgrade to plaintext.
+27. Managed Java release metadata resolves to the shared `Artifact` acquisition pipeline; business
+    code does not add a second downloader or execute vendor installer scripts.
+28. Java selection without an explicit ensure/install request remains free of managed-download side
+    effects, and managed runtimes are probed in staging before create-only publication.
 
 ## Review Questions
 

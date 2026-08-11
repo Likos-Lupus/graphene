@@ -268,6 +268,7 @@ dependencies = [
 name = "graphene"
 version = "0.1.0"
 dependencies = [
+ "graphene-auth",
  "graphene-core",
  "graphene-install",
  "graphene-instance",
@@ -276,8 +277,19 @@ dependencies = [
  "graphene-minecraft",
  "graphene-service",
  "serde_json",
+ "sha2",
  "tempfile",
  "tokio",
+]
+
+[[package]]
+name = "graphene-auth"
+version = "0.1.0"
+dependencies = [
+ "graphene-core",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -372,17 +384,22 @@ dependencies = [
 name = "graphene-providers"
 version = "0.1.0"
 dependencies = [
+ "graphene-auth",
  "graphene-core",
+ "graphene-java",
  "graphene-minecraft",
  "graphene-network",
  "serde",
  "serde_json",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
 name = "graphene-service"
 version = "0.1.0"
 dependencies = [
+ "graphene-auth",
  "graphene-core",
  "graphene-install",
  "graphene-instance",

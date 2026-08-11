@@ -8,7 +8,7 @@ mod config;
 mod retry;
 mod verify;
 
-pub use client::{NetworkClient, TransferResult, VerifiedFile};
+pub use client::{BoundedResponse, NetworkClient, TransferResult, VerifiedFile};
 pub use config::{NetworkConfig, ProxyPolicy, RedirectPolicy};
 pub use retry::RetryPolicy;
 pub use verify::verify_transfer;

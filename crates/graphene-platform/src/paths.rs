@@ -123,7 +123,7 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
     #[cfg(windows)]
     {
         // std::fs::rename on Windows fails when the destination directory already exists.
-        return fs::rename(staging, destination);
+        fs::rename(staging, destination)
     }
 
     #[cfg(not(any(

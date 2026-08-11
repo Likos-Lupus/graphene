@@ -5,6 +5,7 @@ pub(crate) const MARKER_FILE: &str = ".graphene-layout.json";
 
 pub(crate) const DIRECTORIES: &[&str] = &[
     "config",
+    "config/accounts",
     "instances",
     "shared/libraries",
     "shared/assets",

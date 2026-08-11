@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mechanical Phase 0/Phase 1 Cargo and source-boundary architecture guard."""
+"""Mechanical Phase 0/1/2 Cargo and source-boundary architecture guard."""
 
 from __future__ import annotations
 
@@ -8,30 +8,35 @@ import re
 import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+PACKAGE_NAMES = [
+    "graphene",
+    "graphene-core",
+    "graphene-platform",
+    "graphene-network",
+    "graphene-storage",
+    "graphene-minecraft",
+    "graphene-instance",
+    "graphene-java",
+    "graphene-auth",
+    "graphene-providers",
+    "graphene-install",
+    "graphene-launch",
+    "graphene-service",
+]
 PACKAGES = {
-    "graphene": ROOT / "Cargo.toml",
-    "graphene-core": ROOT / "crates/graphene-core/Cargo.toml",
-    "graphene-platform": ROOT / "crates/graphene-platform/Cargo.toml",
-    "graphene-network": ROOT / "crates/graphene-network/Cargo.toml",
-    "graphene-storage": ROOT / "crates/graphene-storage/Cargo.toml",
-    "graphene-minecraft": ROOT / "crates/graphene-minecraft/Cargo.toml",
-    "graphene-instance": ROOT / "crates/graphene-instance/Cargo.toml",
-    "graphene-java": ROOT / "crates/graphene-java/Cargo.toml",
-    "graphene-providers": ROOT / "crates/graphene-providers/Cargo.toml",
-    "graphene-install": ROOT / "crates/graphene-install/Cargo.toml",
-    "graphene-launch": ROOT / "crates/graphene-launch/Cargo.toml",
-    "graphene-service": ROOT / "crates/graphene-service/Cargo.toml",
+    name: ROOT / ("Cargo.toml" if name == "graphene" else f"crates/{name}/Cargo.toml")
+    for name in PACKAGE_NAMES
 }
 
 UI_DEPENDENCIES = {"tauri", "slint"}
 CORE_ALLOWED = {"serde", "uuid"}
-
 EXPECTED_INTERNAL_GRAPH = {
     "graphene": {
         "graphene-core",
         "graphene-minecraft",
         "graphene-instance",
         "graphene-java",
+        "graphene-auth",
         "graphene-install",
         "graphene-launch",
         "graphene-service",
@@ -43,7 +48,14 @@ EXPECTED_INTERNAL_GRAPH = {
     "graphene-minecraft": {"graphene-core"},
     "graphene-instance": {"graphene-core"},
     "graphene-java": {"graphene-core", "graphene-platform"},
-    "graphene-providers": {"graphene-core", "graphene-network", "graphene-minecraft"},
+    "graphene-auth": {"graphene-core"},
+    "graphene-providers": {
+        "graphene-core",
+        "graphene-auth",
+        "graphene-java",
+        "graphene-network",
+        "graphene-minecraft",
+    },
     "graphene-install": {
         "graphene-core",
         "graphene-minecraft",
@@ -60,6 +72,7 @@ EXPECTED_INTERNAL_GRAPH = {
     },
     "graphene-service": {
         "graphene-core",
+        "graphene-auth",
         "graphene-platform",
         "graphene-network",
         "graphene-storage",
@@ -72,27 +85,32 @@ EXPECTED_INTERNAL_GRAPH = {
     },
 }
 
-
-PHASE1_FACADE_ROOTS = {
-    "graphene-minecraft": ROOT / "crates/graphene-minecraft/src/lib.rs",
-    "graphene-instance": ROOT / "crates/graphene-instance/src/lib.rs",
-    "graphene-java": ROOT / "crates/graphene-java/src/lib.rs",
-    "graphene-providers": ROOT / "crates/graphene-providers/src/lib.rs",
-    "graphene-install": ROOT / "crates/graphene-install/src/lib.rs",
-    "graphene-launch": ROOT / "crates/graphene-launch/src/lib.rs",
-}
-MAX_PHASE1_FACADE_LINES = 200
-
 EXPLICIT_FORBIDDEN = {
+    ("graphene-auth", "graphene-network"),
+    ("graphene-auth", "graphene-storage"),
+    ("graphene-auth", "graphene-service"),
+    ("graphene-auth", "graphene-launch"),
+    ("graphene-java", "graphene-providers"),
+    ("graphene-java", "graphene-network"),
+    ("graphene-java", "graphene-storage"),
+    ("graphene-java", "graphene-service"),
+    ("graphene-launch", "graphene-auth"),
+    ("graphene-launch", "graphene-providers"),
+    ("graphene-launch", "graphene-service"),
     ("graphene-minecraft", "graphene-network"),
     ("graphene-minecraft", "graphene-platform"),
     ("graphene-install", "graphene-service"),
-    ("graphene-launch", "graphene-service"),
-    ("graphene-launch", "graphene-providers"),
-    ("graphene-java", "graphene-service"),
-    ("graphene-instance", "reqwest"),
     ("graphene-providers", "graphene-service"),
 }
+
+MAX_CRATE_ROOT_LINES = 120
+BUSINESS_ITEM_RE = re.compile(
+    r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:fn|struct|enum|trait|impl)\b"
+)
+DTO_TYPE_RE = re.compile(r"\b[A-Za-z_]\w*Dto\b")
+PUBLIC_DTO_RE = re.compile(
+    r"(?m)^\s*(?:pub\s+|pub\(crate\)\s+)(?:struct|enum|type)\s+\w*Dto\b"
+)
 
 
 def dependencies(manifest: pathlib.Path) -> set[str]:
@@ -117,16 +135,20 @@ def rust_sources(package: str) -> list[pathlib.Path]:
     else:
         roots = [ROOT / "crates" / package / "src", ROOT / "crates" / package / "tests"]
     result: list[pathlib.Path] = []
-    for root in roots:
-        if root.exists():
-            result.extend(root.rglob("*.rs"))
+    for source_root in roots:
+        if source_root.exists():
+            result.extend(source_root.rglob("*.rs"))
     return result
+
+
+def crate_root(package: str) -> pathlib.Path:
+    return ROOT / ("src/lib.rs" if package == "graphene" else f"crates/{package}/src/lib.rs")
 
 
 def main() -> None:
     missing = [str(path.relative_to(ROOT)) for path in PACKAGES.values() if not path.is_file()]
     if missing:
-        fail(f"required Phase 1 manifests are missing: {missing}")
+        fail(f"required Phase 2 manifests are missing: {missing}")
 
     graph = {name: dependencies(path) for name, path in PACKAGES.items()}
     internal = set(PACKAGES)
@@ -154,7 +176,7 @@ def main() -> None:
         if internal_graph[package] != expected:
             fail(
                 f"{package} internal dependencies {sorted(internal_graph[package])} "
-                f"do not match approved Phase 1 edges {sorted(expected)}"
+                f"do not match approved Phase 2 edges {sorted(expected)}"
             )
 
     visiting: set[str] = set()
@@ -177,32 +199,29 @@ def main() -> None:
     for package in PACKAGES:
         for source_path in rust_sources(package):
             text = source_path.read_text(encoding="utf-8")
+            relative = source_path.relative_to(ROOT)
             if package != "graphene-network" and re.search(r"\breqwest\s*::", text):
-                fail(f"reqwest implementation type referenced by {source_path.relative_to(ROOT)}")
-            if package != "graphene-providers" and re.search(r"\b(?:Mojang|Manifest|Version|Asset)\w*Dto\b", text):
-                fail(f"provider DTO-like type leaked into {source_path.relative_to(ROOT)}")
-            if package == "graphene-providers":
-                if re.search(r"(?m)^\s*pub\s+(?:struct|enum)\s+\w*Dto\b", text):
-                    fail(f"provider DTO publicly exported from {source_path.relative_to(ROOT)}")
-                if re.search(r"(?m)^\s*pub\(crate\)\s+(?:struct|enum)\s+\w*Dto\b", text):
-                    fail(f"provider DTO escaped Mojang namespace in {source_path.relative_to(ROOT)}")
+                fail(f"reqwest implementation type referenced by {relative}")
+            if package != "graphene-providers" and DTO_TYPE_RE.search(text):
+                fail(f"provider DTO-like type leaked into {relative}")
+            if package == "graphene-providers" and PUBLIC_DTO_RE.search(text):
+                fail(f"provider DTO publicly exported from {relative}")
 
-    for package, facade in PHASE1_FACADE_ROOTS.items():
+    for package in PACKAGES:
+        facade = crate_root(package)
+        if not facade.is_file():
+            fail(f"crate root is missing for {package}")
         facade_text = facade.read_text(encoding="utf-8")
         line_count = len(facade_text.splitlines())
-        if line_count > MAX_PHASE1_FACADE_LINES:
+        if line_count > MAX_CRATE_ROOT_LINES:
             fail(
                 f"{package} crate root has {line_count} lines; "
-                f"Phase 1 crate roots must remain thin facades (max {MAX_PHASE1_FACADE_LINES})"
+                f"crate roots must remain thin facades (max {MAX_CRATE_ROOT_LINES})"
             )
-        if re.search(
-            r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?"
-            r"(?:fn|struct|enum|trait|impl)\b",
-            facade_text,
-        ):
+        if BUSINESS_ITEM_RE.search(facade_text):
             fail(f"{package} crate root defines business items instead of acting as a facade")
 
-    print("Phase 1 architecture manifest/source checks passed.")
+    print("Phase 2 architecture manifest/source checks passed.")
 
 
 if __name__ == "__main__":

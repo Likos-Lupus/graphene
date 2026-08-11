@@ -66,6 +66,8 @@ macro_rules! typed_id {
 typed_id!(OperationId);
 typed_id!(ArtifactId);
 typed_id!(InstanceId);
+typed_id!(AccountId);
+typed_id!(ManagedRuntimeId);
 
 #[cfg(test)]
 mod tests {
@@ -84,5 +86,13 @@ mod tests {
         let instance = InstanceId::new();
         let parsed: InstanceId = instance.to_string().parse().expect("valid instance id");
         assert_eq!(instance, parsed);
+
+        let account = AccountId::new();
+        let parsed: AccountId = account.to_string().parse().expect("valid account id");
+        assert_eq!(account, parsed);
+
+        let runtime = ManagedRuntimeId::new();
+        let parsed: ManagedRuntimeId = runtime.to_string().parse().expect("valid runtime id");
+        assert_eq!(runtime, parsed);
     }
 }

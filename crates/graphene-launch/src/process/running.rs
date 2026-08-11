@@ -104,30 +104,6 @@ impl RunningGame {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn kill_is_idempotent_after_terminal_process_control_closes() {
-        let (control, receiver) = mpsc::channel(1);
-        drop(receiver);
-        let game = RunningGame {
-            pid: 7,
-            events: Mutex::new(None),
-            control,
-            terminal: Arc::new(AsyncMutex::new(Some(Terminal::Exited(GameExit {
-                success: true,
-                code: Some(0),
-                killed: false,
-            })))),
-            terminal_notify: Arc::new(Notify::new()),
-            dropped_output: Arc::new(AtomicU64::new(0)),
-        };
-
-        game.kill().await.expect("terminal kill is idempotent");
-    }
-}
 pub(super) async fn monitor_process(
     mut process: PlatformProcess,
     mut control: mpsc::Receiver<Control>,
@@ -210,5 +186,30 @@ fn terminal_result(terminal: Terminal) -> Result<GameExit> {
             }
             Err(error)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn kill_is_idempotent_after_terminal_process_control_closes() {
+        let (control, receiver) = mpsc::channel(1);
+        drop(receiver);
+        let game = RunningGame {
+            pid: 7,
+            events: Mutex::new(None),
+            control,
+            terminal: Arc::new(AsyncMutex::new(Some(Terminal::Exited(GameExit {
+                success: true,
+                code: Some(0),
+                killed: false,
+            })))),
+            terminal_notify: Arc::new(Notify::new()),
+            dropped_output: Arc::new(AtomicU64::new(0)),
+        };
+
+        game.kill().await.expect("terminal kill is idempotent");
     }
 }

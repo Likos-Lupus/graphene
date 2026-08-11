@@ -9,7 +9,7 @@ use graphene_core::{
     Sha1Digest,
 };
 use graphene_minecraft::{ManagedPath, MinecraftVersionId, ResolvedArtifact};
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 pub(super) fn resolved_download(
     download: DownloadDto,
@@ -104,6 +104,6 @@ pub(super) fn metadata_version_path(id: &MinecraftVersionId) -> Result<ManagedPa
 }
 
 pub(super) fn deduplicate_resolved_artifacts(values: &mut Vec<ResolvedArtifact>) {
-    let mut seen = BTreeSet::new();
+    let mut seen = HashSet::new();
     values.retain(|entry| seen.insert(entry.artifact.id));
 }

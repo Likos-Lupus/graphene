@@ -5,13 +5,14 @@ const MAX_STRING_BYTES: usize = 4096;
 
 pub(super) fn normalized_source_url(value: &str, config: &MojangProviderConfig) -> Result<String> {
     bounded_string(value, "artifact URL")?;
-    if let Some(base) = &config.fixture_source_base {
-        if let Some(suffix) = value.strip_prefix("https://fixture.invalid") {
-            let rewritten = format!("{}{}", base.trim_end_matches('/'), suffix);
-            validate_endpoint(&rewritten, true)?;
-            return Ok(rewritten);
-        }
+    if let Some(base) = &config.fixture_source_base
+        && let Some(suffix) = value.strip_prefix("https://fixture.invalid")
+    {
+        let rewritten = format!("{}{}", base.trim_end_matches('/'), suffix);
+        validate_endpoint(&rewritten, true)?;
+        return Ok(rewritten);
     }
+
     validate_endpoint(value, config.allow_http)?;
     Ok(value.to_owned())
 }

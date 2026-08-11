@@ -67,12 +67,12 @@ pub(crate) fn parse_probe_output(executable: PathBuf, text: &str) -> Result<Java
             }
         }
 
-        if version.is_none() && line.contains(" version \"") {
-            if let Some((_, rest)) = line.split_once(" version \"")
-                && let Some((found, _)) = rest.split_once('"')
-            {
-                version = Some(found.to_owned());
-            }
+        if version.is_none()
+            && line.contains(" version \"")
+            && let Some((_, rest)) = line.split_once(" version \"")
+            && let Some((found, _)) = rest.split_once('"')
+        {
+            version = Some(found.to_owned());
         }
     }
 

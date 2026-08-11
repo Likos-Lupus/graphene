@@ -15,6 +15,7 @@ members = [
     "crates/graphene-minecraft",
     "crates/graphene-instance",
     "crates/graphene-java",
+    "crates/graphene-auth",
     "crates/graphene-providers",
     "crates/graphene-install",
     "crates/graphene-launch",
@@ -36,6 +37,7 @@ graphene-storage = { path = "crates/graphene-storage", version = "0.1.0" }
 graphene-minecraft = { path = "crates/graphene-minecraft", version = "0.1.0" }
 graphene-instance = { path = "crates/graphene-instance", version = "0.1.0" }
 graphene-java = { path = "crates/graphene-java", version = "0.1.0" }
+graphene-auth = { path = "crates/graphene-auth", version = "0.1.0" }
 graphene-providers = { path = "crates/graphene-providers", version = "0.1.0" }
 graphene-install = { path = "crates/graphene-install", version = "0.1.0" }
 graphene-launch = { path = "crates/graphene-launch", version = "0.1.0" }
@@ -59,11 +61,13 @@ graphene-core.workspace = true
 graphene-minecraft.workspace = true
 graphene-instance.workspace = true
 graphene-java.workspace = true
+graphene-auth.workspace = true
 graphene-install.workspace = true
 graphene-launch.workspace = true
 graphene-service.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+sha2.workspace = true
 tempfile.workspace = true
 tokio.workspace = true

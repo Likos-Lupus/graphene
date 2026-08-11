@@ -58,6 +58,7 @@ pub enum JavaCandidateSource {
     JavaHome,
     Path,
     CommonRoot,
+    Managed,
 }
 
 impl JavaCandidateSource {
@@ -67,6 +68,7 @@ impl JavaCandidateSource {
             Self::JavaHome => 1,
             Self::Path => 2,
             Self::CommonRoot => 3,
+            Self::Managed => 4,
         }
     }
 }

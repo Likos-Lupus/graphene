@@ -4,7 +4,8 @@ This roadmap defines implementation order and measurable phase exits.
 
 ## Phase 0 — Foundation
 
-> Detailed implementation specification: [`PHASE_0_IMPLEMENTATION_PLAN.md`](PHASE_0_IMPLEMENTATION_PLAN.md)
+> Detailed implementation specification: [
+`PHASE_0_IMPLEMENTATION_PLAN.md`](PHASE_0_IMPLEMENTATION_PLAN.md)
 
 ### Build
 
@@ -49,6 +50,13 @@ From a fresh Graphene directory, install one Vanilla version and launch it throu
 This is the first release-worthy technical milestone.
 
 ## Phase 2 — Authentication and Managed Java
+
+**Current repository status (2026-08-11): implementation candidate.** Provider-neutral accounts,
+Microsoft fixture/protocol adapter, offline identities, separate secret-store port, managed Temurin
+resolution, staged managed-runtime installation, diagnostics, and architecture guards are present.
+Phase 2 is not marked complete: the Rust quality gates cannot run in the current sandbox, the Phase
+1 real Vanilla smoke remains unpassed, no bundled OS credential-vault adapter exists, and the two
+Phase 2 real smokes remain `NOT RUN`.
 
 ### Build
 
