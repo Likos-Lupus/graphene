@@ -87,11 +87,11 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
                 libc::RENAME_NOREPLACE,
             )
         };
-        return if result == 0 {
+        if result == 0 {
             Ok(())
         } else {
             Err(std::io::Error::last_os_error())
-        };
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -113,11 +113,12 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
         // SAFETY: both pointers are valid NUL-terminated path buffers for the duration of the call.
         let result =
             unsafe { libc::renamex_np(source.as_ptr(), target.as_ptr(), libc::RENAME_EXCL) };
-        return if result == 0 {
+
+        if result == 0 {
             Ok(())
         } else {
             Err(std::io::Error::last_os_error())
-        };
+        }
     }
 
     #[cfg(windows)]
@@ -140,6 +141,56 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
             ));
         }
         fs::rename(staging, destination)
+    }
+}
+
+/// Converts Windows canonical verbatim disk/UNC paths back to conventional process-facing
+/// syntax. Other paths and platforms are returned unchanged.
+///
+/// Graphene still uses `std::fs::canonicalize` for containment and identity checks; this helper
+/// only removes the Windows `\\?\` presentation form before a path is passed as argv or exposed
+/// through a public runtime value. Unknown verbatim namespace forms remain unchanged.
+#[must_use]
+pub fn normalize_process_path(path: impl AsRef<Path>) -> PathBuf {
+    let path = path.as_ref();
+
+    #[cfg(windows)]
+    {
+        use std::{
+            ffi::OsString,
+            os::windows::ffi::{OsStrExt, OsStringExt},
+            path::Prefix,
+        };
+
+        let mut components = path.components();
+        let Some(Component::Prefix(prefix)) = components.next() else {
+            return path.to_path_buf();
+        };
+
+        let mut normalized = match prefix.kind() {
+            Prefix::VerbatimDisk(drive) => PathBuf::from(format!("{}:\\", char::from(drive))),
+            Prefix::VerbatimUNC(server, share) => {
+                let mut wide = vec![u16::from(b'\\'), u16::from(b'\\')];
+                wide.extend(server.encode_wide());
+                wide.push(u16::from(b'\\'));
+                wide.extend(share.encode_wide());
+                wide.push(u16::from(b'\\'));
+                PathBuf::from(OsString::from_wide(&wide))
+            }
+            _ => return path.to_path_buf(),
+        };
+
+        for component in components {
+            if !matches!(component, Component::RootDir) {
+                normalized.push(component.as_os_str());
+            }
+        }
+        normalized
+    }
+
+    #[cfg(not(windows))]
+    {
+        path.to_path_buf()
     }
 }
 
@@ -244,5 +295,21 @@ mod tests {
         assert!(ManagedRelativePath::new("cache/bad?/file").is_err());
         assert!(ManagedRelativePath::new("cache/trailing./file").is_err());
         assert!(ManagedRelativePath::new("cache/bad\u{001f}/file").is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn process_paths_remove_only_known_windows_verbatim_prefixes() {
+        assert_eq!(
+            normalize_process_path(r"\\?\C:\Graphene Test\java.exe"),
+            PathBuf::from(r"C:\Graphene Test\java.exe")
+        );
+        assert_eq!(
+            normalize_process_path(r"\\?\UNC\server\share\fixture.jar"),
+            PathBuf::from(r"\\server\share\fixture.jar")
+        );
+
+        let unknown = PathBuf::from(r"\\?\Volume{fixture}\artifact.jar");
+        assert_eq!(normalize_process_path(&unknown), unknown);
     }
 }

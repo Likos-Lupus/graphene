@@ -18,15 +18,17 @@ pub use graphene_core::{
     OperationState, Progress, SensitiveString, Sha1Digest, Sha256Digest,
 };
 pub use graphene_install::{
-    AcquiredArtifact, AcquisitionDisposition, ArtifactAcquirer, INSTALL_PLAN_VERSION, InstallPlan,
-    InstallRequest, Materialization, MaterializationScope, NativeExtraction, PlannedArtifact,
-    PlannedInstance,
+    AcquiredArtifact, AcquisitionDisposition, ArtifactAcquirer, ComponentInstallRequest,
+    INSTALL_PLAN_VERSION, InstallPlan, InstallRequest, InstallToolRunner, Materialization,
+    MaterializationScope, NativeExtraction, PlannedArtifact, PlannedInstance,
+    ProcessorExpansionContext, SelectedToolJava, ToolJavaFuture, ToolRunRequest, ToolRunResult,
+    ToolRunnerFuture,
 };
 pub use graphene_instance::{
     CommittedInstance, INSTALL_FORMAT_VERSION, INSTALL_RECEIPT_SCHEMA_VERSION,
     INSTANCE_SCHEMA_VERSION, InstallReceipt, InstalledArgument, InstalledArtifact,
-    InstalledJavaRequirement, InstalledLibrary, InstalledRule, InstalledRuleAction,
-    InstanceDescriptor, ManagedRelativePath, NewInstanceSpec,
+    InstalledComponent, InstalledComponentKind, InstalledJavaRequirement, InstalledLibrary,
+    InstalledRule, InstalledRuleAction, InstanceDescriptor, ManagedRelativePath, NewInstanceSpec,
 };
 pub use graphene_java::{
     JavaArchitecture, JavaCandidate, JavaCandidateSource, JavaDistributionCapabilities,
@@ -41,18 +43,26 @@ pub use graphene_launch::{
     LaunchRequest, LaunchResolution, LaunchSession, RedactedLaunchPlan, RunningGame,
 };
 pub use graphene_minecraft::{
-    Argument, LatestVersions, Library, ManagedPath, MavenCoordinate, MinecraftArch,
+    Argument, ComponentConflict, ComponentDescriptor, ComponentGraph, ComponentKind,
+    ComponentPreparationRecipe, ComponentProvenance, ComponentRequest, ComponentRequirement,
+    ComponentUid, ComponentVersion, GeneratedOutput, GeneratedOutputScope, LatestVersions, Library,
+    LoaderKind, LoaderProviderCapabilities, LoaderSelection, LoaderSupport, LoaderVersion,
+    LoaderVersionSelector, LoaderVersionSummary, ManagedPath, MavenCoordinate, MinecraftArch,
     MinecraftJavaRequirement, MinecraftOs, MinecraftVersionId, MinecraftVersionMetadata,
-    MinecraftVersionType, OsRule, ResolvedArtifact, ResolvedAssetObject, ResolvedAssets,
-    ResolvedLibrary, ResolvedLogging, ResolvedMinecraft, Rule, RuleAction, RuleContext,
-    VersionManifest, VersionSummary,
+    MinecraftVersionPatch, MinecraftVersionType, OsRule, PreparationArgument,
+    PreparationArgumentPart, PreparationDataValue, PreparationPlaceholder, ProcessorSideCondition,
+    ProcessorStep, ResolvedArtifact, ResolvedAssetObject, ResolvedAssets, ResolvedComponent,
+    ResolvedLibrary, ResolvedLoader, ResolvedLogging, ResolvedMinecraft, Rule, RuleAction,
+    RuleContext, VersionManifest, VersionSummary, loader_support_diagnostic,
 };
 pub use graphene_service::{
     AccountService, AccountSessionOperation, AdoptiumProviderConfig, Architecture,
-    ArtifactOperation, ArtifactService, DownloadDisposition, Graphene, GrapheneBuilder,
-    InstallExecutionOperation, InstallPlanOperation, InstallService, JavaService, LaunchService,
-    ManagedJavaOperation, MicrosoftAuthConfig, MicrosoftLoginOperation, MicrosoftServiceEndpoints,
-    MinecraftManifestOperation, MinecraftService, MojangProviderConfig, NetworkConfig,
-    OperatingSystem, OperationService, PlatformInfo, ProxyPolicy, RedirectPolicy, RetryPolicy,
-    SyntheticOperation, VerifiedArtifact,
+    ArtifactOperation, ArtifactService, DownloadDisposition, FabricProviderConfig,
+    ForgeProviderConfig, Graphene, GrapheneBuilder, InstallExecutionOperation,
+    InstallPlanOperation, InstallService, JavaService, LaunchService, LoaderResolveOperation,
+    LoaderService, LoaderVersionsOperation, ManagedJavaOperation, MicrosoftAuthConfig,
+    MicrosoftLoginOperation, MicrosoftServiceEndpoints, MinecraftManifestOperation,
+    MinecraftService, MojangProviderConfig, NeoForgeProviderConfig, NetworkConfig, OperatingSystem,
+    OperationService, PlatformInfo, ProxyPolicy, RedirectPolicy, RetryPolicy, SyntheticOperation,
+    VerifiedArtifact,
 };

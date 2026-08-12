@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::OpenOptions,
+    fs::{self, OpenOptions},
     io::{self, Write},
     thread,
     time::Duration,
@@ -45,6 +45,28 @@ fn main() {
         for arg in &args {
             writeln!(file, "{arg}").expect("write captured argument");
         }
+    }
+
+    if let Some(path) = args.iter().find_map(|arg| arg.strip_prefix("--fake-capture=")) {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(path)
+            .expect("open argument capture file");
+        for arg in &args {
+            writeln!(file, "{arg}").expect("write captured argument");
+        }
+    }
+
+    if let Some(output) = args
+        .windows(2)
+        .find_map(|pair| (pair[0] == "--out").then_some(pair[1].as_str()))
+    {
+        if let Some(parent) = std::path::Path::new(output).parent() {
+            fs::create_dir_all(parent).expect("create fake processor output parent");
+        }
+        fs::write(output, b"generated-content").expect("write fake processor output");
     }
 
     println!("fixture stdout");

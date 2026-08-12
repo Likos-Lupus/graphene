@@ -1,6 +1,7 @@
 mod lock;
 mod materialize;
 mod metadata;
+mod preparation;
 mod staging;
 
 use self::{
@@ -9,6 +10,7 @@ use self::{
         MaterializedIntegrity, acquired_entry, acquired_source, materialize_file, validate_acquired,
     },
     metadata::write_instance_metadata,
+    preparation::execute_preparation,
     staging::{remove_tree_blocking, validate_staging},
 };
 use crate::{
@@ -17,6 +19,7 @@ use crate::{
     error::{cancelled_error, install_error},
     path::{minecraft_path_to_platform, receipt_path_to_platform},
     plan::InstallPlan,
+    processor::InstallToolRunner,
 };
 use graphene_core::{ArtifactId, ErrorCode, OperationController, Progress, Result};
 use graphene_instance::CommittedInstance;
@@ -34,6 +37,7 @@ use std::{
 pub struct InstallExecutor {
     data_root: DataRoot,
     acquirer: Arc<dyn ArtifactAcquirer>,
+    tool_runner: Option<Arc<dyn InstallToolRunner>>,
 }
 
 impl std::fmt::Debug for InstallExecutor {
@@ -49,7 +53,14 @@ impl InstallExecutor {
         Self {
             data_root,
             acquirer,
+            tool_runner: None,
         }
+    }
+
+    #[must_use]
+    pub fn with_tool_runner(mut self, runner: Arc<dyn InstallToolRunner>) -> Self {
+        self.tool_runner = Some(runner);
+        self
     }
 
     /// Executes with one in-flight acquisition at a time. This intentionally conservative Phase 1
@@ -204,6 +215,17 @@ impl InstallExecutor {
                 total: Some(instance_total),
             })?;
         }
+
+        checkpoint(operation)?;
+        execute_preparation(
+            &self.data_root,
+            plan,
+            &acquired,
+            self.tool_runner.as_ref(),
+            operation,
+            staging_root,
+        )
+        .await?;
 
         checkpoint(operation)?;
         operation.set_stage("extract-natives")?;

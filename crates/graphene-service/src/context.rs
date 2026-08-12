@@ -3,7 +3,7 @@ use graphene_core::{AccountId, ManagedRuntimeId, OperationRegistry};
 use graphene_java::JavaDistributionProvider;
 use graphene_network::NetworkClient;
 use graphene_platform::Platform;
-use graphene_providers::MojangProviderConfig;
+use graphene_providers::{LoaderProviderRegistry, MojangProviderConfig};
 use graphene_storage::DataRoot;
 use std::{
     collections::HashMap,
@@ -18,6 +18,7 @@ pub(crate) struct ServiceContext {
     pub network: NetworkClient,
     pub operations: OperationRegistry,
     pub provider_config: MojangProviderConfig,
+    pub loader_registry: LoaderProviderRegistry,
     pub account_repository: Arc<dyn AccountRepository>,
     pub secret_store: Arc<dyn SecretStore>,
     pub auth_provider: Option<Arc<dyn AuthProvider>>,

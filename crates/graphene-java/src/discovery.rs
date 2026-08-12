@@ -1,5 +1,6 @@
 use crate::{JavaCandidate, JavaCandidateSource, error::java_error};
 use graphene_core::{ErrorCode, Result};
+use graphene_platform::normalize_process_path;
 use std::{
     collections::HashSet,
     ffi::OsString,
@@ -125,7 +126,7 @@ fn deduplicate_candidates(mut candidates: Vec<JavaCandidate>) -> Result<Vec<Java
             continue;
         }
 
-        candidate.executable = canonical;
+        candidate.executable = normalize_process_path(canonical);
         normalized.push(candidate);
     }
 

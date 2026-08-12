@@ -2,16 +2,17 @@
 
 Graphene is a planned **UI-independent Minecraft: Java Edition launcher engine** written in Rust.
 
-The repository contains the Phase 0 foundation, the Phase 1 Vanilla install-to-launch engine, and a
-Phase 2 authentication/managed-Java **implementation candidate**. Tauri, Slint, CLI, and other hosts
-are consumers of the engine rather than part of its domain. Phase 2 adds provider-neutral accounts,
-offline/Microsoft session orchestration, separate secure-secret storage, and explicitly requested
-managed Java while preserving the existing Phase 1 `LaunchSession` and `JavaRuntime` boundaries.
+The repository contains the Phase 0 foundation, the Phase 1 Vanilla install-to-launch engine, a
+Phase 2 authentication/managed-Java **implementation candidate**, and a Phase 3 loader-component
+**implementation candidate**. Tauri, Slint, CLI, and other hosts are consumers of the engine rather
+than part of its domain. Phase 3 adds provider-neutral component composition plus Fabric, Forge, and
+NeoForge adapters while preserving the existing Phase 1 `LaunchPlan` and Phase 2 authentication/Java
+boundaries.
 
-The Phase 2 candidate is not release-sign-off complete in this worktree: Cargo validation could not
-run in the execution sandbox, the Phase 1 real Vanilla smoke remains `NOT RUN`, a production OS
-credential-vault backend must be injected by the host/distributor, and the Phase 2 real auth/Java
-smokes remain `NOT RUN`.
+The Phase 2/3 candidates are not release-sign-off complete in this worktree: Cargo validation could
+not run in the execution sandbox, the Phase 1 real Vanilla smoke remains `NOT RUN`, a production OS
+credential-vault backend must be injected by the host/distributor, and the Phase 2 auth/Java and
+Phase 3 loader real smokes remain `NOT RUN`.
 
 ## Architecture Baseline
 
@@ -40,11 +41,43 @@ Start here:
 - [`docs/PHASE_2_AUTH_SMOKE_TEST.md`](docs/PHASE_2_AUTH_SMOKE_TEST.md) and
   [`docs/PHASE_2_JAVA_SMOKE_TEST.md`](docs/PHASE_2_JAVA_SMOKE_TEST.md) — opt-in real smoke
   procedures and current `NOT RUN` records.
+- [`docs/PHASE_3_IMPLEMENTATION_PLAN.md`](docs/PHASE_3_IMPLEMENTATION_PLAN.md) — normative
+  loader-component design and acceptance criteria.
+- [`docs/PHASE_3_API.md`](docs/PHASE_3_API.md),
+  [`docs/PHASE_3_SECURITY_REVIEW.md`](docs/PHASE_3_SECURITY_REVIEW.md), and
+  [`docs/PHASE_3_SUPPORT_MATRIX.md`](docs/PHASE_3_SUPPORT_MATRIX.md) — actual Phase 3 candidate
+  behavior, trust limits, and evidence-based loader-family support.
+- [`docs/PHASE_3_FABRIC_SMOKE_TEST.md`](docs/PHASE_3_FABRIC_SMOKE_TEST.md),
+  [`docs/PHASE_3_FORGE_SMOKE_TEST.md`](docs/PHASE_3_FORGE_SMOKE_TEST.md), and
+  [`docs/PHASE_3_NEOFORGE_SMOKE_TEST.md`](docs/PHASE_3_NEOFORGE_SMOKE_TEST.md) — pinned real smoke
+  procedures and current `NOT RUN` records.
 - [`docs/TARGET_DELIVERABLE.md`](docs/TARGET_DELIVERABLE.md) — what a complete Graphene backend must
   provide.
 - [
   `docs/adr/0001-ui-independent-launcher-engine.md`](docs/adr/0001-ui-independent-launcher-engine.md) —
   initial architecture decision.
+
+## Phase 3 Component Pipeline
+
+```text
+Minecraft base -> component graph -> ordered patches -> ResolvedMinecraft
+                                                  |
+                                                  v
+                                             InstallPlan
+                                                  |
+                                    verified staged preparation
+                                                  |
+                                                  v
+                                          InstallReceipt
+                                                  |
+                                                  v
+                                  existing Phase 1 LaunchPlan
+```
+
+Fabric contributes normalized profile metadata only. Forge and NeoForge normalize verified installer
+profiles into the same staged Java preparation recipe and declared generated-output pipeline. Exact
+components are committed in receipt schema 2; launch remains offline and loader-neutral. Fabric API,
+mods, modpacks, and broad instance mutation remain later-phase concerns.
 
 ## Phase 2 Vertical Extensions
 

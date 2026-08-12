@@ -73,6 +73,11 @@ Both authenticated and offline profiles feed the same launch pipeline; no secret
 
 ## Phase 3 — Loader Components
 
+**Current worktree status:** implementation candidate. Component/patch domains, loader registry,
+Fabric plus Forge/NeoForge normalization, staged Java preparation, generated-output verification,
+and receipt schema 2 are present. Cargo validation and real loader smoke sign-off remain pending;
+see the Phase 3 API/security/support/smoke documents.
+
 ### Build
 
 - component graph;

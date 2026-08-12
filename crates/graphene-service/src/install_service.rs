@@ -1,10 +1,12 @@
 use crate::{
     adapters::{ServiceArtifactAcquirer, ServiceMetadataAcquirer},
+    component_install::plan_component_install,
     context::ServiceContext,
+    install_tool_runner::ServiceInstallToolRunner,
     operation_lifecycle,
 };
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, OperationHandle, Result};
-use graphene_install::{InstallExecutor, InstallPlan, InstallRequest};
+use graphene_install::{ComponentInstallRequest, InstallExecutor, InstallPlan, InstallRequest};
 use graphene_instance::CommittedInstance;
 use graphene_minecraft::{MinecraftArch, MinecraftOs, RuleContext};
 use graphene_platform::{Architecture, OperatingSystem};
@@ -96,6 +98,25 @@ impl InstallService {
     }
 
     #[must_use]
+    pub fn plan_components(&self, request: ComponentInstallRequest) -> InstallPlanOperation {
+        let controller = self.context.operations.create("component-install-plan");
+        let operation = controller.handle();
+        let context = Arc::clone(&self.context);
+        let future = Box::pin(async move {
+            operation_lifecycle::start(&controller)?;
+            let result = plan_component_install(context, request, &controller).await;
+            operation_lifecycle::finish(
+                &controller,
+                result,
+                ErrorCode::InstallCancelled,
+                ErrorKind::Cancelled,
+                "component installation planning was cancelled",
+            )
+        });
+        InstallPlanOperation { operation, future }
+    }
+
+    #[must_use]
     pub fn execute(&self, plan: InstallPlan) -> InstallExecutionOperation {
         let controller = self.context.operations.create("install-execute");
         let operation = controller.handle();
@@ -103,7 +124,10 @@ impl InstallService {
         let future = Box::pin(async move {
             operation_lifecycle::start(&controller)?;
             let acquirer = Arc::new(ServiceArtifactAcquirer::new(Arc::clone(&context)));
-            let executor = InstallExecutor::new(context.storage.clone(), acquirer);
+            let executor = InstallExecutor::new(context.storage.clone(), acquirer)
+                .with_tool_runner(Arc::new(ServiceInstallToolRunner::new(Arc::clone(
+                    &context,
+                ))));
             let result = executor.execute(plan, &controller).await;
             operation_lifecycle::finish(
                 &controller,
@@ -148,7 +172,7 @@ impl InstallExecutionOperation {
     }
 }
 
-fn current_rule_context(os: OperatingSystem, architecture: Architecture) -> RuleContext {
+pub(crate) fn current_rule_context(os: OperatingSystem, architecture: Architecture) -> RuleContext {
     RuleContext {
         os: match os {
             OperatingSystem::Windows => MinecraftOs::Windows,

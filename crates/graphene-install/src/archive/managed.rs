@@ -1,8 +1,11 @@
 use super::{
     MAX_ARCHIVE_BYTES, MAX_ENTRIES, MAX_ENTRY_BYTES, MAX_EXPANSION_RATIO, MAX_TOTAL_BYTES,
-    archive_error, checkpoint, deflate::inflate_raw_bounded, validate_entry_name, zip::crc32,
+    archive_error, checkpoint, native_codec_error, validate_entry_name,
 };
-use graphene_core::{CancellationToken, Result};
+use graphene_core::{
+    CancellationToken, Result,
+    archive::{crc32, inflate_raw_bounded},
+};
 use graphene_platform::{ManagedRelativePath, ensure_managed_directory};
 use std::{fs, io::Write, path::Path};
 
@@ -93,7 +96,8 @@ fn inflate_gzip(bytes: &[u8], cancellation: &CancellationToken) -> Result<Vec<u8
         ));
     }
 
-    let output = inflate_raw_bounded(compressed, expected_size, MAX_TOTAL_BYTES, cancellation)?;
+    let output = inflate_raw_bounded(compressed, expected_size, MAX_TOTAL_BYTES, cancellation)
+        .map_err(native_codec_error)?;
 
     if output.len() != expected_size || crc32(&output) != expected_crc {
         return Err(archive_error(

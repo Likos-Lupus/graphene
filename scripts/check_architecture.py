@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mechanical Phase 0/1/2 Cargo and source-boundary architecture guard."""
+"""Mechanical Phase 0-3 Cargo and source-boundary architecture guard."""
 
 from __future__ import annotations
 
@@ -99,6 +99,11 @@ EXPLICIT_FORBIDDEN = {
     ("graphene-launch", "graphene-service"),
     ("graphene-minecraft", "graphene-network"),
     ("graphene-minecraft", "graphene-platform"),
+    ("graphene-minecraft", "graphene-providers"),
+    ("graphene-minecraft", "graphene-service"),
+    ("graphene-minecraft", "graphene-install"),
+    ("graphene-install", "graphene-providers"),
+    ("graphene-install", "graphene-network"),
     ("graphene-install", "graphene-service"),
     ("graphene-providers", "graphene-service"),
 }
@@ -176,7 +181,7 @@ def main() -> None:
         if internal_graph[package] != expected:
             fail(
                 f"{package} internal dependencies {sorted(internal_graph[package])} "
-                f"do not match approved Phase 2 edges {sorted(expected)}"
+                f"do not match approved Phase 3 edges {sorted(expected)}"
             )
 
     visiting: set[str] = set()
@@ -206,6 +211,28 @@ def main() -> None:
                 fail(f"provider DTO-like type leaked into {relative}")
             if package == "graphene-providers" and PUBLIC_DTO_RE.search(text):
                 fail(f"provider DTO publicly exported from {relative}")
+            if package == "graphene-service" and re.search(
+                r"graphene_providers::.*(?:fabric|forge|neoforge).*dto", text, re.DOTALL
+            ):
+                fail(f"service imports a private loader DTO module in {relative}")
+            if package in {"graphene-minecraft", "graphene-install"} and re.search(
+                r"\b(?:sh|bash|cmd\.exe|powershell)\b.*(?:-c|/C|-Command)", text, re.IGNORECASE
+            ):
+                fail(f"domain/install source contains a shell execution pattern in {relative}")
+
+
+    duplicate_archive_codecs = [
+        ROOT / "crates/graphene-install/src/archive/deflate.rs",
+        ROOT / "crates/graphene-install/src/archive/zip.rs",
+        ROOT / "crates/graphene-providers/src/loader/common/jar/deflate.rs",
+        ROOT / "crates/graphene-providers/src/loader/common/jar/zip.rs",
+    ]
+    duplicated = [str(path.relative_to(ROOT)) for path in duplicate_archive_codecs if path.exists()]
+    if duplicated:
+        fail(
+            "bounded ZIP/DEFLATE codec must remain centralized in graphene-core; "
+            f"duplicate implementations found: {duplicated}"
+        )
 
     for package in PACKAGES:
         facade = crate_root(package)
@@ -221,7 +248,7 @@ def main() -> None:
         if BUSINESS_ITEM_RE.search(facade_text):
             fail(f"{package} crate root defines business items instead of acting as a facade")
 
-    print("Phase 2 architecture manifest/source checks passed.")
+    print("Phase 3 architecture manifest/source checks passed.")
 
 
 if __name__ == "__main__":

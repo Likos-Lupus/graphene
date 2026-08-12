@@ -13,7 +13,9 @@ mod process;
 pub use arch::Architecture;
 pub use filesystem::{ensure_directory, ensure_managed_directory, replace_file_safely};
 pub use os::OperatingSystem;
-pub use paths::{ManagedRelativePath, normalize_root, publish_directory_create_only};
+pub use paths::{
+    ManagedRelativePath, normalize_process_path, normalize_root, publish_directory_create_only,
+};
 pub use platform::Platform;
 pub use process::{
     CapturedProcess, PlatformProcess, ProcessExit, ProcessOutput, ProcessSpec, classpath_separator,
