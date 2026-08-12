@@ -87,11 +87,11 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
                 libc::RENAME_NOREPLACE,
             )
         };
-        return if result == 0 {
+        if result == 0 {
             Ok(())
         } else {
             Err(std::io::Error::last_os_error())
-        };
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -118,7 +118,7 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
             Ok(())
         } else {
             Err(std::io::Error::last_os_error())
-        };
+        }
     }
 
     #[cfg(windows)]
