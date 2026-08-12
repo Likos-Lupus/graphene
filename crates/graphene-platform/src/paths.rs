@@ -113,7 +113,8 @@ pub fn publish_directory_create_only(staging: &Path, destination: &Path) -> std:
         // SAFETY: both pointers are valid NUL-terminated path buffers for the duration of the call.
         let result =
             unsafe { libc::renamex_np(source.as_ptr(), target.as_ptr(), libc::RENAME_EXCL) };
-        return if result == 0 {
+
+        if result == 0 {
             Ok(())
         } else {
             Err(std::io::Error::last_os_error())
