@@ -50,7 +50,7 @@ The layers describe dependency direction, not runtime call order.
 
 | Crate                  | Primary responsibility                                    | Explicitly not responsible for    |
 |------------------------|-----------------------------------------------------------|-----------------------------------|
-| `graphene-core`        | IDs, artifacts, operations, progress, errors, diagnostics | Minecraft/provider/UI logic       |
+| `graphene-core`        | IDs, artifacts, operations, errors, diagnostics, shared bounded byte codecs | Minecraft/provider/UI/filesystem policy |
 | `graphene-platform`    | OS/filesystem/process/keyring capabilities                | launcher domain policy            |
 | `graphene-network`     | HTTP/download/cache/retry/mirror behavior                 | provider normalization            |
 | `graphene-minecraft`   | Minecraft metadata and resolution                         | network/UI/process execution      |

@@ -3,7 +3,8 @@ use graphene_core::{ArtifactIntegrity, ErrorCode, ErrorKind, GrapheneError, Inst
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, collections::BTreeSet, fmt};
 
-pub const INSTALL_RECEIPT_SCHEMA_VERSION: u32 = 1;
+pub const INSTALL_RECEIPT_SCHEMA_VERSION: u32 = 2;
+const LEGACY_INSTALL_RECEIPT_SCHEMA_VERSION: u32 = 1;
 pub const INSTALL_FORMAT_VERSION: u32 = 1;
 
 /// Durable artifact reference: managed-relative path plus declared integrity.
@@ -60,6 +61,25 @@ pub enum InstalledArgument {
     },
 }
 
+/// Durable component kind kept independent from provider/domain crate implementation details.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum InstalledComponentKind {
+    Minecraft,
+    Loader,
+    Auxiliary,
+}
+
+/// Exact component identity persisted for offline launch and future repair.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstalledComponent {
+    pub uid: String,
+    pub version: String,
+    pub kind: InstalledComponentKind,
+    pub provider: String,
+    pub provenance: Option<String>,
+}
+
 /// Provider-neutral durable install receipt at `.graphene/install.json`.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstallReceipt {
@@ -68,6 +88,8 @@ pub struct InstallReceipt {
     pub instance_id: InstanceId,
     pub requested_version: String,
     pub resolved_version: String,
+    #[serde(default)]
+    pub components: Vec<InstalledComponent>,
     pub version_type: String,
     pub main_class: String,
     pub java_requirement: InstalledJavaRequirement,
@@ -91,6 +113,7 @@ impl fmt::Debug for InstallReceipt {
             .field("instance_id", &self.instance_id)
             .field("requested_version", &self.requested_version)
             .field("resolved_version", &self.resolved_version)
+            .field("components", &self.components)
             .field("version_type", &self.version_type)
             .field("main_class", &self.main_class)
             .field("java_requirement", &self.java_requirement)
@@ -122,6 +145,61 @@ impl InstallReceipt {
         validate_identifier(&self.requested_version, 128, "requested Minecraft version")?;
         validate_identifier(&self.resolved_version, 128, "resolved Minecraft version")?;
         validate_identifier(&self.version_type, 64, "Minecraft version type")?;
+
+        if self.components.is_empty() || self.components.len() > 32 {
+            return Err(instance_error(
+                "install receipt has an invalid component set",
+            ));
+        }
+
+        let mut component_uids = BTreeSet::new();
+        let mut minecraft_components = 0usize;
+        let mut loader_components = 0usize;
+
+        for component in &self.components {
+            validate_component_uid(&component.uid)?;
+            validate_component_version(&component.version)?;
+            validate_identifier(&component.provider, 96, "component provider")?;
+
+            if component
+                .provenance
+                .as_ref()
+                .is_some_and(|value| value.len() > 512 || value.chars().any(char::is_control))
+            {
+                return Err(instance_error(
+                    "install receipt component provenance is invalid",
+                ));
+            }
+
+            if !component_uids.insert(component.uid.as_str()) {
+                return Err(instance_error(
+                    "install receipt contains duplicate component UIDs",
+                ));
+            }
+
+            match component.kind {
+                InstalledComponentKind::Minecraft => minecraft_components += 1,
+                InstalledComponentKind::Loader => loader_components += 1,
+                InstalledComponentKind::Auxiliary => {}
+            }
+        }
+
+        if minecraft_components != 1 || loader_components > 1 {
+            return Err(instance_error(
+                "install receipt component kinds are invalid",
+            ));
+        }
+
+        let base = self
+            .components
+            .iter()
+            .find(|component| matches!(component.kind, InstalledComponentKind::Minecraft))
+            .expect("count checked");
+        if base.uid != "net.minecraft" || base.version != self.resolved_version {
+            return Err(instance_error(
+                "install receipt base component does not match resolved Minecraft",
+            ));
+        }
 
         if self.main_class.trim().is_empty()
             || self.main_class.len() > 512
@@ -215,7 +293,7 @@ impl InstallReceipt {
             ));
         }
 
-        let receipt: Self = serde_json::from_slice(bytes).map_err(|source| {
+        let mut receipt: Self = serde_json::from_slice(bytes).map_err(|source| {
             GrapheneError::new(
                 ErrorCode::LaunchInstanceInvalid,
                 ErrorKind::Launch,
@@ -223,6 +301,23 @@ impl InstallReceipt {
             )
             .with_source(source)
         })?;
+
+        if receipt.schema_version == LEGACY_INSTALL_RECEIPT_SCHEMA_VERSION {
+            if !receipt.components.is_empty() {
+                return Err(instance_error(
+                    "legacy install receipt unexpectedly contains components",
+                ));
+            }
+
+            receipt.components = vec![InstalledComponent {
+                uid: "net.minecraft".to_owned(),
+                version: receipt.resolved_version.clone(),
+                kind: InstalledComponentKind::Minecraft,
+                provider: "mojang".to_owned(),
+                provenance: Some("implicit-phase1-receipt".to_owned()),
+            }];
+            receipt.schema_version = INSTALL_RECEIPT_SCHEMA_VERSION;
+        }
 
         receipt.validate()?;
         Ok(receipt)
@@ -304,10 +399,140 @@ fn validate_argument_value(value: &str) -> Result<()> {
     Ok(())
 }
 
+fn validate_component_uid(value: &str) -> Result<()> {
+    if value.is_empty()
+        || value.len() > 128
+        || value.starts_with('.')
+        || value.ends_with('.')
+        || value.contains("..")
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+    {
+        return Err(instance_error("install receipt component UID is invalid"));
+    }
+
+    Ok(())
+}
+
+fn validate_component_version(value: &str) -> Result<()> {
+    if value.trim().is_empty()
+        || value.len() > 192
+        || value.chars().any(char::is_control)
+        || value.contains('/')
+        || value.contains('\\')
+    {
+        return Err(instance_error(
+            "install receipt component version is invalid",
+        ));
+    }
+
+    Ok(())
+}
+
 fn validate_identifier(value: &str, maximum: usize, field: &'static str) -> Result<()> {
     if value.trim().is_empty() || value.len() > maximum || value.contains('\0') {
         return Err(instance_error(field));
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn artifact(path: &str) -> InstalledArtifact {
+        InstalledArtifact {
+            path: ManagedRelativePath::new(path).expect("managed path"),
+            integrity: ArtifactIntegrity::none().with_sha1(
+                "0123456789abcdef0123456789abcdef01234567"
+                    .parse()
+                    .expect("sha1"),
+            ),
+            expected_size: Some(1),
+        }
+    }
+
+    fn current_receipt() -> InstallReceipt {
+        InstallReceipt {
+            schema_version: INSTALL_RECEIPT_SCHEMA_VERSION,
+            install_format_version: INSTALL_FORMAT_VERSION,
+            instance_id: InstanceId::new(),
+            requested_version: "1.21.1".to_owned(),
+            resolved_version: "1.21.1".to_owned(),
+            components: vec![InstalledComponent {
+                uid: "net.minecraft".to_owned(),
+                version: "1.21.1".to_owned(),
+                kind: InstalledComponentKind::Minecraft,
+                provider: "mojang".to_owned(),
+                provenance: Some("version-manifest".to_owned()),
+            }],
+            version_type: "release".to_owned(),
+            main_class: "net.minecraft.client.main.Main".to_owned(),
+            java_requirement: InstalledJavaRequirement {
+                major_version: 21,
+                component_hint: Some("java-runtime-delta".to_owned()),
+            },
+            client: artifact("shared/versions/1.21.1/client.jar"),
+            libraries: Vec::new(),
+            asset_index_id: "17".to_owned(),
+            asset_index: artifact("shared/assets/indexes/17.json"),
+            assets_root: ManagedRelativePath::new("shared/assets").expect("assets"),
+            natives_directory: ManagedRelativePath::new("natives").expect("natives"),
+            logging_configuration: None,
+            logging_argument: None,
+            jvm_arguments: Vec::new(),
+            game_arguments: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn phase1_receipt_is_migrated_in_memory_to_an_implicit_minecraft_component() {
+        let mut value = serde_json::to_value(current_receipt()).expect("serialize");
+        let object = value.as_object_mut().expect("receipt object");
+        object.insert("schema_version".to_owned(), serde_json::json!(1));
+        object.remove("components");
+        let bytes = serde_json::to_vec(&value).expect("json");
+
+        let migrated = InstallReceipt::from_json(&bytes).expect("legacy receipt");
+        assert_eq!(migrated.schema_version, INSTALL_RECEIPT_SCHEMA_VERSION);
+        assert_eq!(migrated.components.len(), 1);
+        assert_eq!(migrated.components[0].uid, "net.minecraft");
+        assert_eq!(migrated.components[0].version, "1.21.1");
+        assert_eq!(migrated.components[0].provider, "mojang");
+    }
+
+    #[test]
+    fn malformed_legacy_receipt_with_components_is_rejected() {
+        let mut receipt = current_receipt();
+        receipt.schema_version = 1;
+        let bytes = serde_json::to_vec(&receipt).expect("json");
+        assert!(InstallReceipt::from_json(&bytes).is_err());
+    }
+
+    #[test]
+    fn loader_receipt_requires_exactly_one_base_and_at_most_one_primary_loader() {
+        let mut receipt = current_receipt();
+
+        receipt.components.push(InstalledComponent {
+            uid: "net.fabricmc.fabric-loader".to_owned(),
+            version: "0.16.10".to_owned(),
+            kind: InstalledComponentKind::Loader,
+            provider: "fabric-meta".to_owned(),
+            provenance: Some("profile".to_owned()),
+        });
+
+        receipt.validate().expect("one loader");
+
+        receipt.components.push(InstalledComponent {
+            uid: "net.minecraftforge.forge".to_owned(),
+            version: "52.0.1".to_owned(),
+            kind: InstalledComponentKind::Loader,
+            provider: "forge-maven".to_owned(),
+            provenance: None,
+        });
+
+        assert!(receipt.validate().is_err());
+    }
 }

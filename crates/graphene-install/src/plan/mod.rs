@@ -3,10 +3,13 @@ mod validate;
 
 use graphene_core::{Artifact, ArtifactId};
 use graphene_instance::{InstallReceipt, InstanceDescriptor};
-use graphene_minecraft::{ManagedPath, MinecraftVersionId, ResolvedArtifact, ResolvedMinecraft};
+use graphene_minecraft::{
+    ComponentPreparationRecipe, ManagedPath, MinecraftVersionId, ResolvedArtifact,
+    ResolvedMinecraft,
+};
 use serde::{Deserialize, Serialize};
 
-pub const INSTALL_PLAN_VERSION: u32 = 1;
+pub const INSTALL_PLAN_VERSION: u32 = 2;
 pub const MAX_INSTALL_ARTIFACTS: usize = 600_000;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +56,7 @@ pub struct InstallPlan {
     pub instance_materializations: Vec<Materialization>,
     pub native_extractions: Vec<NativeExtraction>,
     pub metadata_artifacts: Vec<ResolvedArtifact>,
+    pub preparation: ComponentPreparationRecipe,
     pub receipt: InstallReceipt,
 }
 
@@ -103,6 +107,9 @@ mod tests {
                 major_version: 21,
                 component_hint: None,
             },
+            components: vec![
+                graphene_minecraft::ResolvedComponent::minecraft("fixture-1").expect("component"),
+            ],
         }
     }
 

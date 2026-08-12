@@ -1,8 +1,11 @@
 //! Stable, infrastructure-independent foundation types for Graphene.
 //!
 //! This crate owns identifiers, artifact declarations, integrity values, structured errors and
-//! diagnostics, and the single operation/progress/event/cancellation model used by later phases.
+//! diagnostics, the single operation/progress/event/cancellation model, and small bounded byte
+//! codecs shared by multiple backend contexts.
 
+#[doc(hidden)]
+pub mod archive;
 mod artifact;
 mod diagnostic;
 mod error;

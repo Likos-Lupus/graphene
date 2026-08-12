@@ -1,14 +1,16 @@
 use crate::{
-    AccountService, ArtifactService, InstallService, JavaService, LaunchService, MinecraftService,
-    OperationService, account_service::StorageAccountRepository, context::ServiceContext,
+    AccountService, ArtifactService, InstallService, JavaService, LaunchService, LoaderService,
+    MinecraftService, OperationService, account_service::StorageAccountRepository,
+    context::ServiceContext,
 };
 use graphene_auth::{SecretStore, UnavailableSecretStore};
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, OperationRegistry, Result};
 use graphene_network::{NetworkClient, NetworkConfig};
 use graphene_platform::{Architecture, OperatingSystem, Platform};
 use graphene_providers::{
-    AdoptiumProvider, AdoptiumProviderConfig, MicrosoftAuthConfig, MicrosoftAuthProvider,
-    MojangProviderConfig,
+    AdoptiumProvider, AdoptiumProviderConfig, FabricProvider, FabricProviderConfig, ForgeProvider,
+    ForgeProviderConfig, LoaderProviderRegistry, MicrosoftAuthConfig, MicrosoftAuthProvider,
+    MojangProviderConfig, NeoForgeProvider, NeoForgeProviderConfig,
 };
 use graphene_storage::DataRoot;
 use std::{
@@ -85,6 +87,12 @@ impl Graphene {
         MinecraftService::new(Arc::clone(&self.context))
     }
 
+    /// Returns normalized loader discovery and exact-resolution services.
+    #[must_use]
+    pub fn loaders(&self) -> LoaderService {
+        LoaderService::new(Arc::clone(&self.context))
+    }
+
     /// Returns deterministic install planning/execution.
     #[must_use]
     pub fn install(&self) -> InstallService {
@@ -114,6 +122,9 @@ pub struct GrapheneBuilder {
     microsoft_auth: Option<MicrosoftAuthConfig>,
     secret_store: Arc<dyn SecretStore>,
     java_provider_config: AdoptiumProviderConfig,
+    fabric_provider_config: FabricProviderConfig,
+    forge_provider_config: ForgeProviderConfig,
+    neoforge_provider_config: NeoForgeProviderConfig,
 }
 
 impl std::fmt::Debug for GrapheneBuilder {
@@ -126,6 +137,9 @@ impl std::fmt::Debug for GrapheneBuilder {
             .field("microsoft_auth", &self.microsoft_auth)
             .field("secret_store", &"<configured-backend>")
             .field("java_provider_config", &self.java_provider_config)
+            .field("fabric_provider_config", &self.fabric_provider_config)
+            .field("forge_provider_config", &self.forge_provider_config)
+            .field("neoforge_provider_config", &self.neoforge_provider_config)
             .finish()
     }
 }
@@ -142,6 +156,9 @@ impl GrapheneBuilder {
             microsoft_auth: None,
             secret_store: Arc::new(UnavailableSecretStore),
             java_provider_config: AdoptiumProviderConfig::default(),
+            fabric_provider_config: FabricProviderConfig::default(),
+            forge_provider_config: ForgeProviderConfig::default(),
+            neoforge_provider_config: NeoForgeProviderConfig::default(),
         }
     }
 
@@ -157,6 +174,27 @@ impl GrapheneBuilder {
     #[must_use]
     pub fn minecraft_provider(mut self, provider_config: MojangProviderConfig) -> Self {
         self.provider_config = provider_config;
+        self
+    }
+
+    /// Replaces the Fabric loader provider configuration.
+    #[must_use]
+    pub fn fabric_provider(mut self, config: FabricProviderConfig) -> Self {
+        self.fabric_provider_config = config;
+        self
+    }
+
+    /// Replaces the Forge loader provider configuration.
+    #[must_use]
+    pub fn forge_provider(mut self, config: ForgeProviderConfig) -> Self {
+        self.forge_provider_config = config;
+        self
+    }
+
+    /// Replaces the NeoForge loader provider configuration.
+    #[must_use]
+    pub fn neoforge_provider(mut self, config: NeoForgeProviderConfig) -> Self {
+        self.neoforge_provider_config = config;
         self
     }
 
@@ -227,6 +265,20 @@ impl GrapheneBuilder {
             self.java_provider_config,
         )?)
             as Arc<dyn graphene_java::JavaDistributionProvider>;
+        let mut loader_registry = LoaderProviderRegistry::new();
+
+        loader_registry.register(Arc::new(FabricProvider::new(
+            network.clone(),
+            self.fabric_provider_config,
+        )?))?;
+        loader_registry.register(Arc::new(ForgeProvider::new(
+            network.clone(),
+            self.forge_provider_config,
+        )?))?;
+        loader_registry.register(Arc::new(NeoForgeProvider::new(
+            network.clone(),
+            self.neoforge_provider_config,
+        )?))?;
 
         debug!(
             module = "graphene-service",
@@ -241,6 +293,7 @@ impl GrapheneBuilder {
             network,
             operations,
             provider_config: self.provider_config,
+            loader_registry,
             account_repository,
             secret_store: self.secret_store,
             auth_provider,

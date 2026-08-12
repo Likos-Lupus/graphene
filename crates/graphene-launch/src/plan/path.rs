@@ -2,7 +2,7 @@ use crate::error::launch_error;
 use graphene_core::{ErrorCode, Result};
 use graphene_instance::ManagedRelativePath;
 use graphene_minecraft::{MinecraftArch, MinecraftOs};
-use graphene_platform::{Architecture, OperatingSystem};
+use graphene_platform::{Architecture, OperatingSystem, normalize_process_path};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -73,12 +73,15 @@ pub(super) fn reject_symlink_components(root: &Path, relative: &Path) -> Result<
 }
 
 pub(super) fn path_utf8(path: &Path) -> Result<String> {
-    path.to_str().map(str::to_owned).ok_or_else(|| {
-        launch_error(
-            ErrorCode::LaunchPlanInvalid,
-            "launch path is not valid UTF-8",
-        )
-    })
+    normalize_process_path(path)
+        .into_os_string()
+        .into_string()
+        .map_err(|_| {
+            launch_error(
+                ErrorCode::LaunchPlanInvalid,
+                "launch path is not valid UTF-8",
+            )
+        })
 }
 
 pub(super) fn validate_ordinary_file(

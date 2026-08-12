@@ -3,16 +3,20 @@ use super::{
     INSTALL_PLAN_VERSION, InstallPlan, MAX_INSTALL_ARTIFACTS, Materialization,
     MaterializationScope, NativeExtraction, PlannedArtifact, PlannedInstance,
 };
-use crate::{error::install_error, request::InstallRequest};
+use crate::{
+    error::install_error,
+    request::{ComponentInstallRequest, InstallRequest},
+};
 use graphene_core::{ArtifactId, ErrorCode, Result};
 use graphene_instance::{
     INSTALL_FORMAT_VERSION, INSTALL_RECEIPT_SCHEMA_VERSION, InstallReceipt, InstalledArgument,
-    InstalledArtifact, InstalledJavaRequirement, InstalledLibrary, InstalledRule,
-    InstalledRuleAction, InstanceDescriptor, ManagedRelativePath as ReceiptPath,
+    InstalledArtifact, InstalledComponent, InstalledComponentKind, InstalledJavaRequirement,
+    InstalledLibrary, InstalledRule, InstalledRuleAction, InstanceDescriptor,
+    ManagedRelativePath as ReceiptPath,
 };
 use graphene_minecraft::{
-    Argument, ManagedPath, MavenCoordinate, MinecraftArch, MinecraftOs, MinecraftVersionType,
-    ResolvedArtifact, ResolvedLibrary, ResolvedMinecraft, Rule, RuleAction,
+    Argument, ComponentPreparationRecipe, ManagedPath, MavenCoordinate, MinecraftArch, MinecraftOs,
+    MinecraftVersionType, ResolvedArtifact, ResolvedLibrary, ResolvedMinecraft, Rule, RuleAction,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -22,6 +26,30 @@ impl InstallPlan {
         request: InstallRequest,
         minecraft: ResolvedMinecraft,
         metadata_artifacts: Vec<ResolvedArtifact>,
+    ) -> Result<Self> {
+        Self::build_with_preparation(
+            request,
+            minecraft,
+            metadata_artifacts,
+            ComponentPreparationRecipe::default(),
+        )
+    }
+
+    pub fn build_component(
+        request: ComponentInstallRequest,
+        minecraft: ResolvedMinecraft,
+        metadata_artifacts: Vec<ResolvedArtifact>,
+        preparation: ComponentPreparationRecipe,
+    ) -> Result<Self> {
+        let vanilla = InstallRequest::with_instance(request.instance, request.minecraft_version);
+        Self::build_with_preparation(vanilla, minecraft, metadata_artifacts, preparation)
+    }
+
+    fn build_with_preparation(
+        request: InstallRequest,
+        minecraft: ResolvedMinecraft,
+        metadata_artifacts: Vec<ResolvedArtifact>,
+        preparation: ComponentPreparationRecipe,
     ) -> Result<Self> {
         if request.minecraft_version != minecraft.version_id {
             return Err(install_error(
@@ -44,6 +72,18 @@ impl InstallPlan {
         let mut artifact_ids = HashSet::new();
         let mut destinations = HashMap::<String, ArtifactId>::new();
 
+        let generated_destinations = preparation
+            .generated_outputs
+            .iter()
+            .filter(|output| {
+                matches!(
+                    output.scope,
+                    graphene_minecraft::GeneratedOutputScope::SharedImmutable
+                )
+            })
+            .map(|output| output.managed_destination.as_str().to_owned())
+            .collect::<HashSet<_>>();
+
         add_materialization(
             &minecraft.client,
             MaterializationScope::Instance,
@@ -52,8 +92,11 @@ impl InstallPlan {
             &mut artifact_ids,
             &mut destinations,
         )?;
+
         for library in &minecraft.libraries {
-            if let Some(classpath) = &library.classpath_artifact {
+            if let Some(classpath) = &library.classpath_artifact
+                && !generated_destinations.contains(classpath.relative_path.as_str())
+            {
                 add_materialization(
                     classpath,
                     MaterializationScope::Shared,
@@ -88,6 +131,7 @@ impl InstallPlan {
             &mut artifact_ids,
             &mut destinations,
         )?;
+
         for object in &minecraft.assets.objects {
             add_materialization(
                 &object.artifact,
@@ -121,12 +165,28 @@ impl InstallPlan {
             )?;
         }
 
+        if let Some(installer) = &preparation.installer {
+            add_preparation_artifact(installer, &mut artifacts, &mut artifact_ids)?;
+        }
+
+        for input in &preparation.input_artifacts {
+            add_preparation_artifact(input, &mut artifacts, &mut artifact_ids)?;
+        }
+
+        for processor in &preparation.processors {
+            add_preparation_artifact(&processor.executable_jar, &mut artifacts, &mut artifact_ids)?;
+            for classpath in &processor.classpath {
+                add_preparation_artifact(classpath, &mut artifacts, &mut artifact_ids)?;
+            }
+        }
+
         if artifacts.len() > MAX_INSTALL_ARTIFACTS {
             return Err(install_error(
                 ErrorCode::InstallPlanInvalid,
                 "installation plan contains too many artifacts",
             ));
         }
+
         natives.sort_by_key(|entry| entry.artifact_id.to_string());
         natives.dedup_by_key(|entry| entry.artifact_id);
 
@@ -136,6 +196,11 @@ impl InstallPlan {
             instance_id: request.instance.id,
             requested_version: request.minecraft_version.as_str().to_owned(),
             resolved_version: minecraft.version_id.as_str().to_owned(),
+            components: minecraft
+                .components
+                .iter()
+                .map(installed_component)
+                .collect(),
             version_type: version_type_name(&minecraft.version_type),
             main_class: minecraft.main_class.clone(),
             java_requirement: InstalledJavaRequirement {
@@ -190,10 +255,40 @@ impl InstallPlan {
             instance_materializations: instance,
             native_extractions: natives,
             metadata_artifacts,
+            preparation,
             receipt,
         };
+
         plan.validate()?;
         Ok(plan)
+    }
+}
+
+fn add_preparation_artifact(
+    value: &ResolvedArtifact,
+    artifacts: &mut Vec<PlannedArtifact>,
+    artifact_ids: &mut HashSet<ArtifactId>,
+) -> Result<()> {
+    if artifact_ids.insert(value.artifact.id) {
+        artifacts.push(PlannedArtifact {
+            artifact: value.artifact.clone(),
+        });
+    }
+    Ok(())
+}
+
+fn installed_component(value: &graphene_minecraft::ResolvedComponent) -> InstalledComponent {
+    InstalledComponent {
+        uid: value.uid.as_str().to_owned(),
+        version: value.version.as_str().to_owned(),
+        kind: match value.kind {
+            graphene_minecraft::ComponentKind::Minecraft => InstalledComponentKind::Minecraft,
+            graphene_minecraft::ComponentKind::Loader => InstalledComponentKind::Loader,
+            graphene_minecraft::ComponentKind::Auxiliary => InstalledComponentKind::Auxiliary,
+            _ => InstalledComponentKind::Auxiliary,
+        },
+        provider: value.provenance.provider.clone(),
+        provenance: value.provenance.detail.clone(),
     }
 }
 

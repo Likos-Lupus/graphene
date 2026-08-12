@@ -50,7 +50,7 @@ test/Clippy/doc/format gates and the real Vanilla smoke test are **not recorded 
 
 ## Native Archives
 
-The private Phase 1 native ZIP reader is intentionally bounded and rejects:
+The shared filesystem-neutral ZIP/DEFLATE codec plus the Phase 1 native extraction policy are intentionally bounded and reject:
 
 - absolute, parent-traversal, backslash, or otherwise unsafe entry paths;
 - symbolic-link and unsupported entry types;
@@ -88,7 +88,7 @@ valid deflate, parent traversal, absolute paths, and symlink-shaped entries.
 ## Internal Boundary Review
 
 The Phase 1 crate roots are thin public facades. Mojang DTOs remain under the private `mojang`
-namespace; native ZIP/deflate implementation details remain private to `graphene-install`; launch
+namespace; ZIP/DEFLATE byte parsing is centralized in the hidden `graphene-core::archive` workspace primitive while native path/extraction policy remains private to `graphene-install`; launch
 secret materialization remains private to the process boundary; and Java discovery/probe helpers are
 kept behind the `graphene-java` public model/selection API. The modularization did not add crates or
 new third-party dependencies.

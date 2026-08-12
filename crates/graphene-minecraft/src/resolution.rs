@@ -1,7 +1,7 @@
 use crate::{
     Argument, MinecraftJavaRequirement, MinecraftVersionId, MinecraftVersionMetadata,
-    MinecraftVersionType, ResolvedArtifact, ResolvedAssets, ResolvedLibrary, ResolvedLogging,
-    RuleContext, error::mc_error, rules_allow, tokenize_legacy_arguments,
+    MinecraftVersionType, ResolvedArtifact, ResolvedAssets, ResolvedComponent, ResolvedLibrary,
+    ResolvedLogging, RuleContext, error::mc_error, rules_allow, tokenize_legacy_arguments,
 };
 use graphene_core::{ErrorCode, Result};
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,7 @@ pub struct ResolvedMinecraft {
     pub jvm_args: Vec<Argument>,
     pub game_args: Vec<Argument>,
     pub java_requirement: MinecraftJavaRequirement,
+    pub components: Vec<ResolvedComponent>,
 }
 
 /// Converts complete inherited metadata plus a parsed asset index into the Tier A domain result.
@@ -65,36 +66,9 @@ pub fn resolve_minecraft(
 
     let mut libraries = Vec::new();
     for library in metadata.libraries {
-        if !rules_allow(&library.rules, context)? {
-            continue;
+        if let Some(library) = resolve_library(library, context)? {
+            libraries.push(library);
         }
-
-        let native_artifact = match library.natives.get(&context.os) {
-            Some(template) => {
-                let classifier = template.replace("${arch}", context.arch.classifier_value());
-                Some(
-                    library
-                        .classifiers
-                        .get(&classifier)
-                        .cloned()
-                        .ok_or_else(|| {
-                            mc_error(
-                                ErrorCode::MinecraftNativeUnavailable,
-                                "selected native classifier has no declared download",
-                            )
-                            .with_context("library", library.coordinate.library_identity())
-                            .with_context("classifier", classifier)
-                        })?,
-                )
-            }
-            None => None,
-        };
-
-        libraries.push(ResolvedLibrary {
-            coordinate: library.coordinate,
-            classpath_artifact: library.artifact,
-            native_artifact,
-        });
     }
 
     let game_args = if metadata.game_args.is_empty() {
@@ -109,6 +83,8 @@ pub fn resolve_minecraft(
         metadata.game_args
     };
 
+    let base_component = ResolvedComponent::minecraft(metadata.id.as_str())?;
+
     Ok(ResolvedMinecraft {
         version_id: metadata.id,
         version_type: metadata.version_type,
@@ -120,7 +96,44 @@ pub fn resolve_minecraft(
         jvm_args: metadata.jvm_args,
         game_args,
         java_requirement,
+        components: vec![base_component],
     })
+}
+
+pub(crate) fn resolve_library(
+    library: crate::Library,
+    context: &RuleContext,
+) -> Result<Option<ResolvedLibrary>> {
+    if !rules_allow(&library.rules, context)? {
+        return Ok(None);
+    }
+
+    let native_artifact = match library.natives.get(&context.os) {
+        Some(template) => {
+            let classifier = template.replace("${arch}", context.arch.classifier_value());
+            Some(
+                library
+                    .classifiers
+                    .get(&classifier)
+                    .cloned()
+                    .ok_or_else(|| {
+                        mc_error(
+                            ErrorCode::MinecraftNativeUnavailable,
+                            "selected native classifier has no declared download",
+                        )
+                        .with_context("library", library.coordinate.library_identity())
+                        .with_context("classifier", classifier)
+                    })?,
+            )
+        }
+        None => None,
+    };
+
+    Ok(Some(ResolvedLibrary {
+        coordinate: library.coordinate,
+        classpath_artifact: library.artifact,
+        native_artifact,
+    }))
 }
 
 #[cfg(test)]

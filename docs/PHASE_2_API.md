@@ -200,7 +200,7 @@ A directory alone is not a valid runtime. Inventory requires a valid descriptor 
 executable. Committed selection probes the executable again before returning the existing
 `JavaRuntime`.
 
-The managed archive layer reuses the Phase 1 ZIP/deflate primitives and adds bounded tar.gz support.
+The managed archive layer reuses the shared bounded ZIP/DEFLATE byte codec and the Phase 1 extraction policy, and adds bounded tar.gz support.
 It rejects absolute/traversal/backslash/prefix paths, symlinks, hardlinks, special files, excessive
 entry count/entry size/total expansion, implausible compression ratios, malformed compression, and
 integrity/checksum failures. Downloaded package installer scripts are never executed.

@@ -1,9 +1,9 @@
-mod deflate;
 mod managed;
-mod zip;
 
-use self::zip::{central_entries, crc32, extract_entry};
-use graphene_core::{CancellationToken, ErrorCode, ErrorKind, GrapheneError, Result};
+use graphene_core::{
+    CancellationToken, ErrorCode, ErrorKind, GrapheneError, Result,
+    archive::{ArchiveCodecError, central_entries, crc32, extract_entry},
+};
 use graphene_platform::{ManagedRelativePath, ensure_managed_directory};
 use std::{fs, io::Write, path::Path};
 
@@ -32,7 +32,8 @@ pub(crate) fn extract_native_zip(
 
     let bytes = fs::read(archive)
         .map_err(|source| archive_error("failed to read native archive").with_source(source))?;
-    let entries = central_entries(&bytes)?;
+    let entries =
+        central_entries(&bytes, MAX_ENTRIES, MAX_NAME_BYTES).map_err(native_codec_error)?;
     if entries.len() > MAX_ENTRIES {
         return Err(archive_error("native archive contains too many entries"));
     }
@@ -90,7 +91,8 @@ pub(crate) fn extract_native_zip(
             ensure_managed_directory(destination, &parent)?;
         }
 
-        let data = extract_entry(&bytes, &entry, cancellation)?;
+        let data = extract_entry(&bytes, &entry, MAX_ENTRY_BYTES, cancellation)
+            .map_err(native_codec_error)?;
         if crc32(&data) != entry.crc32 {
             return Err(archive_error("native archive entry CRC does not match"));
         }
@@ -122,6 +124,243 @@ pub fn extract_managed_zip(
 }
 
 pub use managed::extract_tar_gz as extract_managed_tar_gz;
+
+pub(crate) fn extract_selected_entry(
+    archive: &Path,
+    entry_name: &str,
+    destination: &Path,
+    maximum_size: u64,
+    cancellation: &CancellationToken,
+) -> Result<()> {
+    let metadata = fs::symlink_metadata(archive).map_err(|source| {
+        loader_archive_error("failed to inspect loader installer").with_source(source)
+    })?;
+    if !metadata.is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.len() > MAX_ARCHIVE_BYTES
+    {
+        return Err(loader_archive_error(
+            "loader installer is not a bounded ordinary file",
+        ));
+    }
+
+    validate_entry_name(entry_name)
+        .map_err(|_| loader_archive_error("loader installer entry path is unsafe"))?;
+
+    let bytes = fs::read(archive).map_err(|source| {
+        loader_archive_error("failed to read loader installer").with_source(source)
+    })?;
+    let entries =
+        central_entries(&bytes, MAX_ENTRIES, MAX_NAME_BYTES).map_err(loader_codec_error)?;
+
+    if entries.len() > MAX_ENTRIES {
+        return Err(loader_archive_error(
+            "loader installer contains too many entries",
+        ));
+    }
+
+    let mut selected = None;
+    for entry in entries {
+        checkpoint(cancellation)?;
+        if entry.name != entry_name {
+            continue;
+        }
+
+        if selected.is_some() {
+            return Err(loader_archive_error(
+                "loader installer contains a duplicate selected entry",
+            ));
+        }
+
+        if entry.is_directory || entry.is_symlink || !entry.is_regular {
+            return Err(loader_archive_error(
+                "loader installer selected entry has an unsafe type",
+            ));
+        }
+
+        if entry.uncompressed_size as u64 > maximum_size
+            || entry.uncompressed_size > MAX_ENTRY_BYTES
+            || (entry.uncompressed_size > 0
+                && (entry.compressed_size == 0
+                    || entry.uncompressed_size
+                        > entry.compressed_size.saturating_mul(MAX_EXPANSION_RATIO)))
+        {
+            return Err(loader_archive_error(
+                "loader installer selected entry exceeds resource bounds",
+            ));
+        }
+
+        selected = Some(entry);
+    }
+
+    let entry = selected
+        .ok_or_else(|| loader_archive_error("loader installer selected entry is missing"))?;
+    let data = extract_entry(
+        &bytes,
+        &entry,
+        maximum_size.min(MAX_ENTRY_BYTES as u64) as usize,
+        cancellation,
+    )
+    .map_err(loader_codec_error)?;
+
+    if crc32(&data) != entry.crc32 {
+        return Err(loader_archive_error(
+            "loader installer selected entry CRC does not match",
+        ));
+    }
+
+    if destination.file_name().is_none() {
+        return Err(loader_archive_error(
+            "loader installer extraction destination is invalid",
+        ));
+    }
+
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent).map_err(|source| {
+            loader_archive_error("failed to create loader installer input directory")
+                .with_source(source)
+        })?;
+    }
+
+    let mut file = fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(destination)
+        .map_err(|source| {
+            loader_archive_error("failed to create loader installer input").with_source(source)
+        })?;
+
+    file.write_all(&data).map_err(|source| {
+        loader_archive_error("failed to write loader installer input").with_source(source)
+    })?;
+
+    file.sync_all().map_err(|source| {
+        loader_archive_error("failed to sync loader installer input").with_source(source)
+    })?;
+
+    Ok(())
+}
+
+pub(crate) fn processor_main_class(
+    archive: &Path,
+    cancellation: &CancellationToken,
+) -> Result<String> {
+    const MANIFEST: &str = "META-INF/MANIFEST.MF";
+    const MAX_MANIFEST_BYTES: usize = 64 * 1024;
+
+    let metadata = fs::symlink_metadata(archive).map_err(|source| {
+        loader_archive_error("failed to inspect loader processor JAR").with_source(source)
+    })?;
+
+    if !metadata.is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.len() > MAX_ARCHIVE_BYTES
+    {
+        return Err(loader_archive_error(
+            "loader processor JAR is not a bounded ordinary file",
+        ));
+    }
+
+    checkpoint(cancellation)?;
+
+    let bytes = fs::read(archive).map_err(|source| {
+        loader_archive_error("failed to read loader processor JAR").with_source(source)
+    })?;
+    let entries =
+        central_entries(&bytes, MAX_ENTRIES, MAX_NAME_BYTES).map_err(loader_codec_error)?;
+
+    let mut selected = None;
+    for entry in entries {
+        if entry.name != MANIFEST {
+            continue;
+        }
+
+        if selected.is_some() || entry.is_directory || entry.is_symlink || !entry.is_regular {
+            return Err(loader_archive_error(
+                "loader processor manifest entry is ambiguous or unsafe",
+            ));
+        }
+
+        if entry.uncompressed_size > MAX_MANIFEST_BYTES {
+            return Err(loader_archive_error(
+                "loader processor manifest exceeds its size bound",
+            ));
+        }
+
+        selected = Some(entry);
+    }
+
+    let entry = selected.ok_or_else(|| {
+        GrapheneError::new(
+            ErrorCode::LoaderProcessorUnsupported,
+            ErrorKind::Install,
+            "loader processor JAR has no manifest",
+        )
+    })?;
+    let manifest = extract_entry(&bytes, &entry, MAX_MANIFEST_BYTES, cancellation)
+        .map_err(loader_codec_error)?;
+
+    if crc32(&manifest) != entry.crc32 {
+        return Err(loader_archive_error(
+            "loader processor manifest CRC does not match",
+        ));
+    }
+
+    parse_manifest_main_class(&manifest)
+}
+
+fn parse_manifest_main_class(bytes: &[u8]) -> Result<String> {
+    let text = std::str::from_utf8(bytes).map_err(|source| {
+        GrapheneError::new(
+            ErrorCode::LoaderProcessorUnsupported,
+            ErrorKind::Install,
+            "loader processor manifest is not UTF-8",
+        )
+        .with_source(source)
+    })?;
+
+    let mut logical = Vec::<String>::new();
+    for raw in text.replace("\r\n", "\n").split('\n') {
+        if let Some(continuation) = raw.strip_prefix(' ') {
+            let previous = logical.last_mut().ok_or_else(|| {
+                GrapheneError::new(
+                    ErrorCode::LoaderProcessorUnsupported,
+                    ErrorKind::Install,
+                    "loader processor manifest starts with an invalid continuation",
+                )
+            })?;
+            previous.push_str(continuation);
+        } else if !raw.is_empty() {
+            logical.push(raw.to_owned());
+        }
+    }
+
+    let value = logical
+        .iter()
+        .find_map(|line| line.strip_prefix("Main-Class:"))
+        .map(str::trim)
+        .ok_or_else(|| {
+            GrapheneError::new(
+                ErrorCode::LoaderProcessorUnsupported,
+                ErrorKind::Install,
+                "loader processor manifest has no Main-Class entry",
+            )
+        })?;
+
+    if value.is_empty()
+        || value.len() > 512
+        || value.contains('\0')
+        || value.chars().any(char::is_whitespace)
+    {
+        return Err(GrapheneError::new(
+            ErrorCode::LoaderProcessorUnsupported,
+            ErrorKind::Install,
+            "loader processor manifest Main-Class is invalid",
+        ));
+    }
+
+    Ok(value.to_owned())
+}
 
 fn validate_entry_name(name: &str) -> Result<ManagedRelativePath> {
     let trimmed = name.trim_end_matches('/');
@@ -167,6 +406,39 @@ fn checkpoint(cancellation: &CancellationToken) -> Result<()> {
     }
 }
 
+fn native_codec_error(source: ArchiveCodecError) -> GrapheneError {
+    if source.is_cancelled() {
+        GrapheneError::new(
+            ErrorCode::InstallCancelled,
+            ErrorKind::Cancelled,
+            "installation was cancelled during native extraction",
+        )
+    } else {
+        archive_error("native archive structure or compression is invalid").with_source(source)
+    }
+}
+
+fn loader_codec_error(source: ArchiveCodecError) -> GrapheneError {
+    if source.is_cancelled() {
+        GrapheneError::new(
+            ErrorCode::LoaderProcessorCancelled,
+            ErrorKind::Cancelled,
+            "loader archive operation was cancelled",
+        )
+    } else {
+        loader_archive_error("loader archive structure or compression is invalid")
+            .with_source(source)
+    }
+}
+
+fn loader_archive_error(message: &'static str) -> GrapheneError {
+    GrapheneError::new(
+        ErrorCode::LoaderInstallerInvalid,
+        ErrorKind::Install,
+        message,
+    )
+}
+
 fn archive_error(message: &'static str) -> GrapheneError {
     GrapheneError::new(
         ErrorCode::InstallNativeExtractionFailed,
@@ -174,9 +446,23 @@ fn archive_error(message: &'static str) -> GrapheneError {
         message,
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn manifest_main_class_parser_is_bounded_and_handles_continuations() {
+        assert_eq!(
+            parse_manifest_main_class(
+                b"Manifest-Version: 1.0\r\nMain-Class: com.example.\r\n Tool\r\n"
+            )
+            .expect("main class"),
+            "com.example.Tool"
+        );
+        assert!(parse_manifest_main_class(b"Manifest-Version: 1.0\n").is_err());
+        assert!(parse_manifest_main_class(b"Main-Class: bad class\n").is_err());
+    }
 
     #[test]
     fn traversal_names_are_rejected() {
@@ -195,7 +481,7 @@ mod tests {
                 state = state.wrapping_mul(22_695_477).wrapping_add(1);
                 bytes.push((state >> 16) as u8);
             }
-            let _ = central_entries(&bytes);
+            let _ = central_entries(&bytes, MAX_ENTRIES, MAX_NAME_BYTES);
         }
 
         for value in [
@@ -209,11 +495,6 @@ mod tests {
         ] {
             let _ = validate_entry_name(value);
         }
-    }
-
-    #[test]
-    fn crc32_known_vector() {
-        assert_eq!(crc32(b"123456789"), 0xcbf4_3926);
     }
 
     fn fixture(name: &str) -> std::path::PathBuf {

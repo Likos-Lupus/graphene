@@ -15,7 +15,7 @@ use crate::{
     plan::{LaunchArgument, LaunchPlan},
 };
 use graphene_core::{ErrorCode, Result};
-use graphene_platform::{PlatformProcess, ProcessSpec};
+use graphene_platform::{PlatformProcess, ProcessSpec, normalize_process_path};
 use std::{
     ffi::OsString,
     path::PathBuf,
@@ -69,13 +69,16 @@ fn materialize_argument(argument: &LaunchArgument, classpath: &str, separator: c
 fn materialize_classpath(classpath: &[PathBuf], separator: char) -> Result<String> {
     let mut entries = Vec::with_capacity(classpath.len());
     for path in classpath {
-        let value = path.to_str().ok_or_else(|| {
-            launch_error(
-                ErrorCode::LaunchPlanInvalid,
-                "launch path is not valid UTF-8",
-            )
-        })?;
-        entries.push(value.to_owned());
+        let value = normalize_process_path(path)
+            .into_os_string()
+            .into_string()
+            .map_err(|_| {
+                launch_error(
+                    ErrorCode::LaunchPlanInvalid,
+                    "launch path is not valid UTF-8",
+                )
+            })?;
+        entries.push(value);
     }
 
     Ok(entries.join(&separator.to_string()))

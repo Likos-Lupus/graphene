@@ -66,6 +66,31 @@ impl JavaService {
         }
     }
 
+    /// Side-effect-free Java selection for an already normalized requirement.
+    pub(crate) async fn select_for_requirement(
+        &self,
+        requirement: &JavaRequirement,
+    ) -> Result<JavaRuntime> {
+        match select_java(requirement, None).await {
+            Ok(runtime) => Ok(runtime),
+            Err(local_error)
+                if matches!(
+                    local_error.code,
+                    ErrorCode::JavaNotFound | ErrorCode::JavaIncompatible
+                ) =>
+            {
+                match self.select_committed_managed(requirement).await {
+                    Ok(runtime) => Ok(runtime),
+                    Err(managed_error) if managed_error.code == ErrorCode::JavaNotFound => {
+                        Err(local_error)
+                    }
+                    Err(managed_error) => Err(managed_error),
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
+
     /// Explicitly permits managed installation when no existing runtime satisfies the instance.
     #[must_use]
     pub fn ensure_for_instance(

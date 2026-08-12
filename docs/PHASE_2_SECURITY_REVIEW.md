@@ -103,7 +103,7 @@ beside ciphertext.
 
 ## Runtime Archive and Filesystem Safety
 
-Managed ZIP extraction reuses the bounded Phase 1 ZIP/deflate implementation. Managed tar.gz adds
+Managed ZIP extraction reuses the shared bounded ZIP/DEFLATE byte codec and the Phase 1 extraction policy. Managed tar.gz adds
 bounded gzip/DEFLATE and tar parsing. Both paths reject:
 
 - absolute paths and platform prefixes;
