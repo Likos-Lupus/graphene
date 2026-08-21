@@ -16,7 +16,7 @@ const MAX_MANIFEST_BYTES: usize = 8 * 1024 * 1024;
 const MAX_VERSION_BYTES: usize = 8 * 1024 * 1024;
 const MAX_ASSET_INDEX_BYTES: usize = 32 * 1024 * 1024;
 
-/// Provider-side verified-metadata acquisition port. The service adapter delegates to Phase 0's
+/// Provider-side verified-metadata acquisition port. The service adapter delegates to Graphene's
 /// artifact service so version and asset-index documents share the verified cache pipeline.
 pub trait MetadataArtifactAcquirer: Send + Sync {
     fn acquire<'a>(

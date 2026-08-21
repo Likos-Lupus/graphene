@@ -77,7 +77,7 @@ pub struct VersionSummary {
     pub compliance_level: Option<u32>,
 }
 
-/// Latest IDs are informational only. Phase 1 installation always selects an explicit ID.
+/// Latest IDs are informational only. Installation always selects an explicit ID.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LatestVersions {
     pub release: MinecraftVersionId,

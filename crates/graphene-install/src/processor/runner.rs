@@ -34,7 +34,7 @@ pub struct ToolRunResult {
 pub type ToolJavaFuture<'a> = Pin<Box<dyn Future<Output = Result<SelectedToolJava>> + Send + 'a>>;
 pub type ToolRunnerFuture<'a> = Pin<Box<dyn Future<Output = Result<ToolRunResult>> + Send + 'a>>;
 
-/// Dependency-inversion port for selecting Java through Phase 2 and launching one verified Java tool.
+/// Dependency-inversion port for selecting Java through the managed Java service and launching one verified Java tool.
 pub trait InstallToolRunner: Send + Sync {
     fn select_java<'a>(
         &'a self,

@@ -1,207 +1,153 @@
 # Graphene Architecture
 
-This document is a focused architectural reference. The normative project definition is in
-`PROJECT_SPECIFICATION.md`.
+Graphene is a UI-independent launcher engine built as a Cargo workspace of bounded-context crates.
+This document owns dependency direction and architectural boundaries. Product scope is in
+[`PROJECT_SPECIFICATION.md`](PROJECT_SPECIFICATION.md); code/test/document standards are in
+[`ENGINEERING_STANDARDS.md`](ENGINEERING_STANDARDS.md).
 
-## 1. Layer Model
-
-```text
-Facade
-  graphene
-
-Application / Composition
-  graphene-service
-
-Use Cases
-  graphene-install
-  graphene-launch
-  graphene-diagnostics
-
-Domain Contexts
-  graphene-minecraft
-  graphene-instance
-  graphene-auth
-  graphene-java
-  graphene-content
-  graphene-pack
-
-Adapters / Infrastructure
-  graphene-providers
-  graphene-storage
-  graphene-network
-  graphene-platform
-
-Foundation
-  graphene-core
-```
-
-The layers describe dependency direction, not runtime call order.
-
-## 2. Dependency Rules
-
-- Higher layers may orchestrate lower-layer interfaces.
-- Stable domain crates do not depend on concrete provider integrations.
-- Adapter crates may depend on domain crates to normalize external data.
-- `graphene-service` wires implementations together.
-- the root `graphene` crate exports a curated stable API and contains no duplicated business logic.
-- cycles between crates are forbidden.
-
-## 3. Bounded Context Ownership
-
-| Crate                  | Primary responsibility                                    | Explicitly not responsible for    |
-|------------------------|-----------------------------------------------------------|-----------------------------------|
-| `graphene-core`        | IDs, artifacts, operations, errors, diagnostics, shared bounded byte codecs | Minecraft/provider/UI/filesystem policy |
-| `graphene-platform`    | OS/filesystem/process/keyring capabilities                | launcher domain policy            |
-| `graphene-network`     | HTTP/download/cache/retry/mirror behavior                 | provider normalization            |
-| `graphene-minecraft`   | Minecraft metadata and resolution                         | network/UI/process execution      |
-| `graphene-auth`        | accounts, sessions, auth provider contracts               | UI windows/keyring implementation |
-| `graphene-java`        | runtime discovery/probe/selection                         | Minecraft metadata parsing        |
-| `graphene-content`     | normalized content model/provider contracts               | provider-specific DTOs            |
-| `graphene-instance`    | instance identity/layout/config/lifecycle                 | downloading/launching             |
-| `graphene-pack`        | pack formats and normalization                            | separate installer                |
-| `graphene-providers`   | concrete external APIs and DTO mapping                    | stable domain policy              |
-| `graphene-install`     | plans, transactions, repair execution                     | UI/provider DTOs                  |
-| `graphene-launch`      | launch plan and game process lifecycle                    | auth/provider HTTP                |
-| `graphene-diagnostics` | verification/crash/log diagnostics/redaction              | localized UI prose                |
-| `graphene-storage`     | persistence and migration                                 | domain decision-making            |
-| `graphene-service`     | application orchestration and DI                          | reimplementation of contexts      |
-
-## 4. Core Plan Model
-
-### Installation
+## Layer model
 
 ```text
-Request -> Resolve -> Plan -> Stage -> Fetch -> Verify -> Materialize -> Validate -> Commit
+host/UI/CLI
+    |
+    v
+root graphene facade
+    |
+    v
+graphene-service  (composition/adapters)
+    |
+    +-------------------------------+
+    |               |               |
+ install/launch   providers       storage
+    |               |               |
+    +-------- domain ports/models ---+
+                    |
+         minecraft / java / auth / instance
+                    |
+                   core
+
+network and platform are infrastructure boundaries used only where architecture permits.
 ```
 
-No complex instance mutation is allowed to skip planning and transaction boundaries.
+The diagram is directional guidance, not an exact manifest snapshot. A crate is allowed to have
+*fewer* dependencies when a refactor removes an unnecessary edge.
 
-### Launch
+## Current dependency direction
 
-```text
-Request -> Resolve instance -> Resolve account -> Resolve Java
-        -> Resolve Minecraft -> Build LaunchPlan -> Execute
-```
+Durable rules:
 
-`LaunchPlan` is deterministic input to process execution.
+- `graphene-core` remains infrastructure-independent except for narrow foundational value/serde
+  dependencies permitted by the architecture checker.
+- UI frameworks do not enter engine crates.
+- Reqwest implementation types stay in `graphene-network`.
+- Provider DTO-like types stay private to `graphene-providers`.
+- `graphene-install` does not depend on providers, network, or service; it owns ports that service
+  adapts to verified acquisition and tool execution.
+- `graphene-launch` does not depend on auth providers or loader/provider implementations; it
+  consumes committed normalized launch state plus an ephemeral session.
+- `graphene-minecraft` owns provider-neutral Minecraft/component/patch/preparation domain models and
+  does not depend on provider/service/install infrastructure.
+- `graphene-java` owns Java domain/ports without depending on provider/network/storage/service.
+- `graphene-auth` owns account/auth/secret-store contracts without depending on network/storage/
+  service/launch infrastructure.
+- Providers may normalize into stable domain types but may not depend on service composition.
+- The internal workspace dependency graph must remain acyclic.
 
-## 5. Adapter Boundary
+`scripts/check_architecture.py` encodes forbidden edges and boundary checks. It intentionally does
+not encode equality with the current complete dependency set.
 
-External data is normalized immediately:
+## Root and crate facades
 
-```text
-External JSON/HTTP
-      |
-      v
-Provider adapter
-      |
-      v
-Graphene domain model
-      |
-      v
-Services / Plans / UI hosts
-```
+The root `graphene` crate re-exports Graphene-owned public values/services. Every crate root is a
+thin facade: module declarations and exports belong there; business implementations belong in
+cohesive modules. The checker enforces a stricter line/item rule for crate roots than ordinary
+source files.
 
-External DTOs may be retained inside `graphene-providers` for caching or debugging, but are not
-public service-layer types.
+Provider DTOs, Reqwest responses/builders, archive implementation details, Tokio process handles,
+and storage transaction primitives are not root-facade API.
 
-## 6. Host Boundary
+## Artifact acquisition inversion
 
-Allowed:
+There is one verified acquisition pipeline. Domain/install code describes an `Artifact` and uses an
+installer-owned acquisition port. Service adapts that port to the shared network/cache pipeline.
+Provider metadata acquisition follows the same direction through narrow Graphene-owned adapters.
 
-```text
-Tauri app -> graphene
-Slint app -> graphene
-CLI       -> graphene
-```
+This preserves integrity, cancellation, retry, cache, and error semantics without introducing
+`install -> service` or `install -> network` dependencies.
 
-Forbidden:
+## Transaction and publication boundaries
 
-```text
-graphene-minecraft -> tauri
-graphene-launch    -> slint
-graphene-auth      -> desktop window callbacks
-```
+Installation and managed-runtime creation separate immutable/shared acquisition from isolated
+staging. Staged state is validated before a final publication boundary. Cancellation may abort
+safely before the seal; once cancellation is sealed for the small non-interruptible commit,
+committed success is not retroactively relabeled as cancellation.
 
-## 7. Concurrency and Operations
+Persisted receipts/descriptors contain Graphene-owned normalized identities and managed-relative
+paths, not provider DTOs, transient staging paths, host secrets, or absolute data-root paths.
 
-Every long-running use case receives an `OperationId` and cancellation token and emits structured
-operation events.
+## Minecraft and loader composition
 
-An instance mutation obtains an instance-level write lock.
+`graphene-minecraft` owns the component graph and ordered `MinecraftVersionPatch` model. The graph
+requires one Minecraft base component, structurally rejects conflicting primary loaders, validates
+requirements/cycles/bounds, and produces deterministic ordering.
 
-Read-only metadata and content operations should remain concurrent where safe.
+Loader adapters resolve provider-specific discovery/integrity/profile data into exact component
+identity, a normalized patch, and optional `ComponentPreparationRecipe`. Install execution consumes
+that recipe generically. Launch consumes only committed normalized state and has no loader-family
+execution branch.
 
-## 8. Persistence Boundary
+Forge and NeoForge remain distinct provider adapters. Their modern verified installer profiles may
+converge on the shared Forge-family preparation model after provider-specific discovery and
+integrity verification.
 
-Authoritative state:
+## Process boundary
 
-- launcher config files;
-- instance metadata;
-- Graphene lockfiles;
-- user content.
+Java probes, install tools, and Minecraft are launched by direct executable + argv, never by
+constructing a shell command. Platform/process implementation handles remain private. Public launch
+exposes Graphene-owned lifecycle/event/result types with bounded output behavior.
 
-Disposable/rebuildable state:
+Install-tool execution is dependency-inverted: the install domain describes explicit Java/tool/argv
+inputs; service selects Java and performs bounded direct execution. Provider/install metadata cannot
+silently request arbitrary shell/script/native execution.
 
-- HTTP cache;
-- provider search cache;
-- hash lookup cache;
-- task history;
-- derived database indexes.
+## Storage and archive boundaries
 
-## 9. Dependency Review Checklist
+`graphene-storage` owns the data root, containment, and publication policy. Paths crossing managed
+boundaries are validated lexically and, where needed, canonically against symlink escapes.
 
-Before merging a new dependency between crates, answer:
+The filesystem-neutral bounded ZIP/DEFLATE byte codec lives once in `graphene-core::archive` so
+security-sensitive parsing is not duplicated. Install owns archive extraction/path/write policy;
+providers own selective verified installer-JAR inspection and provider-specific limits.
 
-1. Which context owns the type being shared?
-2. Is this dependency from stable domain to volatile adapter?
-3. Could an interface/value object invert the dependency?
-4. Is a provider-specific type crossing the boundary?
-5. Would adding a second provider force a change in the consumer?
-6. Does this make a UI framework part of backend compilation?
-7. Does it create or approach a dependency cycle?
+## Authentication and secrets
 
-If any answer indicates boundary leakage, redesign before merging.
+`graphene-auth` owns provider-neutral account/session/secret contracts. Provider protocol adapters
+normalize external identity responses. Secret persistence is an injected `SecretStore`; the default
+unavailable store fails rather than silently falling back to plaintext credentials.
 
-## 10. Phase 1 Activated Dependency Graph
+Launch sessions are ephemeral and secret-bearing values use redacting wrappers. Persisted instance
+state does not contain account access/refresh tokens.
 
-Phase 1 activates the Vanilla install-to-launch contexts without changing the inward dependency
-rule. The mechanically enforced internal graph is:
+## Managed Java
 
-```text
-graphene-minecraft -> graphene-core
+Java compatibility/discovery/probe models live in `graphene-java`; service composes local selection
+with committed managed runtime inventory and a distribution-provider port. Managed runtime archives
+are verified before extraction, staged, probed, descriptor-validated, and published atomically.
 
-graphene-instance  -> graphene-core
+The reference distribution adapter is an implementation behind the port, not an architectural
+requirement for every distributor.
 
-graphene-platform  -> graphene-core
+## Architecture checks
 
-graphene-network   -> graphene-core
+`scripts/check_architecture.py` should fail for durable violations such as:
 
-graphene-java      -> graphene-core + graphene-platform
+- forbidden internal dependency edges or cycles;
+- UI dependencies inside the engine;
+- Reqwest escaping the network boundary;
+- public/provider DTO leakage;
+- shell execution patterns in protected domain/install code;
+- duplicated bounded archive codecs;
+- missing/thick/business-logic crate roots.
 
-graphene-providers -> graphene-core + graphene-network + graphene-minecraft
-
-graphene-storage   -> graphene-core + graphene-platform
-
-graphene-install   -> graphene-core + graphene-minecraft + graphene-instance
-                   + graphene-storage + graphene-platform
-
-graphene-launch    -> graphene-core + graphene-minecraft + graphene-instance
-                   + graphene-java + graphene-platform
-
-graphene-service   -> all activated backend contexts for composition only
-
-graphene (facade)  -> curated Graphene-owned context/service APIs
-```
-
-`graphene-install` owns the `ArtifactAcquirer` port; `graphene-service` implements the adapter to
-the Phase 0 `ArtifactService`. This keeps the verified transport/cache pipeline reusable without a
-reverse service dependency. See ADR-0003.
-
-Phase 1 committed instances use a staged create-only publication transaction and a provider-neutral
-schema-versioned install receipt. See ADR-0004. Java/Minecraft processes are direct-argv and their
-Tokio implementation handles remain private. See ADR-0005.
-
-The architecture checker rejects direct Reqwest dependencies outside `graphene-network`, provider
-DTO leakage, backend UI dependencies, forbidden Phase 1 edges, cycles, and root-facade provider
-parsing.
+It must not fail because a legitimate refactor removes a dependency, module, or file. Repository
+hygiene conventions are checked separately by `scripts/check_hygiene.py`.

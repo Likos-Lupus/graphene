@@ -1,4 +1,4 @@
-//! Create-only Phase 1 instance identity and durable, provider-neutral installation metadata.
+//! Create-only instance identity and durable, provider-neutral installation metadata.
 //!
 //! The crate root is a facade. Schema ownership and validation are split by instance concept;
 //! filesystem mutation, Minecraft resolution, provider parsing, and launch behavior remain outside

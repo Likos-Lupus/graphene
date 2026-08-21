@@ -18,7 +18,7 @@ pub struct OperationEvent {
     pub kind: OperationEventKind,
 }
 
-/// Phase 0 operation event classes.
+/// Operation event classes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum OperationEventKind {

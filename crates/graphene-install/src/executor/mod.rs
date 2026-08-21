@@ -63,7 +63,7 @@ impl InstallExecutor {
         self
     }
 
-    /// Executes with one in-flight acquisition at a time. This intentionally conservative Phase 1
+    /// Executes with one in-flight acquisition at a time. This intentionally conservative
     /// scheduler is bounded and reuses the service's own download concurrency when acquisitions are
     /// composed with other operations.
     pub async fn execute(

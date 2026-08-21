@@ -1,4 +1,4 @@
-//! Phase 0 Graphene-managed storage root, layout, cache paths, and commit primitives.
+//! Graphene-managed storage root, layout, cache paths, and commit primitives.
 //!
 //! Filesystem paths are explicitly rooted per engine. There is no process-global data directory.
 

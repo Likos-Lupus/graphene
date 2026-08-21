@@ -1,173 +1,72 @@
 # Graphene Implementation Roadmap
 
-This roadmap defines implementation order and measurable phase exits.
+This is the canonical home for development chronology. Current behavior belongs in `API.md`, trust
+boundaries in `SECURITY.md`, and validation status in `VALIDATION.md`.
 
 ## Phase 0 — Foundation
 
-> Detailed implementation specification: [
-`PHASE_0_IMPLEMENTATION_PLAN.md`](PHASE_0_IMPLEMENTATION_PLAN.md)
+Workspace/facade, core operation/error/artifact types, platform/network/storage boundaries, verified
+artifact acquisition, cancellation/progress, and deterministic local-fixture testing.
 
-### Build
+**Exit:** cross-platform build/test gates, verified download/cache behavior, safe cancellation, and
+no UI dependency.
 
-- Cargo workspace;
-- root `graphene` facade;
-- `graphene-core`;
-- `graphene-platform`;
-- `graphene-network`;
-- operation/event/progress model;
-- error/diagnostic model;
-- cancellation;
-- storage root and initial layout.
+## Phase 1 — Vanilla end-to-end
 
-### Exit
+Mojang metadata normalization, resolved Minecraft, deterministic create-only installation, local
+Java selection, offline launch planning, and direct process lifecycle.
 
-- compilation on supported development platforms;
-- artifact download fixture with hash verification;
-- nested progress demonstration;
-- cancellation leaves no committed partial output;
-- no UI dependency.
+**Exit:** from an empty data root, install and launch a pinned Vanilla version through the library,
+including restart/offline planning and immutable reuse evidence.
 
-## Phase 1 — Vanilla End-to-End
+## Phase 2 — Authentication and managed Java
 
-### Build
+Provider-neutral accounts, Microsoft device/refresh chain, injected secure credential storage,
+offline identities, managed Java resolution/staged installation, and Java diagnostics.
 
-- Mojang version manifest adapter;
-- normalized Minecraft metadata;
-- inheritance/rules/libraries/assets/natives;
-- `ResolvedMinecraft`;
-- `InstallRequest`;
-- `InstallPlan`;
-- transaction executor;
-- Java discovery/probe/selection;
-- `LaunchRequest`;
-- `LaunchPlan`;
-- process runner.
+**Repository status:** implementation candidate. Real authentication/managed-Java smoke remains
+`NOT RUN`, a production secure vault is host/distributor supplied, and Rust quality gates cannot run
+in the current toolchain-less environment.
 
-### Exit
+## Phase 3 — Loader components
 
-From a fresh Graphene directory, install one Vanilla version and launch it through the library.
+Component graph/patch model, provider registry, Fabric/Forge/NeoForge adapters, Forge-family staged
+Java preparation, generated-output verification/reuse, and receipt component persistence.
 
-This is the first release-worthy technical milestone.
+**Repository status:** implementation candidate. Deterministic fixture coverage exists; real loader
+smokes and Rust quality gates remain pending. See `LOADER_SUPPORT.md` and `VALIDATION.md`.
 
-## Phase 2 — Authentication and Managed Java
+## Phase 4 — Instance engine
 
-**Current repository status (2026-08-11): implementation candidate.** Provider-neutral accounts,
-Microsoft fixture/protocol adapter, offline identities, separate secret-store port, managed Temurin
-resolution, staged managed-runtime installation, diagnostics, and architecture guards are present.
-Phase 2 is not marked complete: the Rust quality gates cannot run in the current sandbox, the Phase
-1 real Vanilla smoke remains unpassed, no bundled OS credential-vault adapter exists, and the two
-Phase 2 real smokes remain `NOT RUN`.
+Instance repository, create/delete/rename/clone, global/per-instance configuration, locking,
+lockfiles, verify, and repair.
 
-### Build
-
-- Microsoft auth;
-- offline account;
-- session refresh;
-- secure secret store;
-- managed Java provider;
-- Java diagnostics.
-
-### Exit
-
-Both authenticated and offline profiles feed the same launch pipeline; no secrets appear in logs.
-
-## Phase 3 — Loader Components
-
-**Current worktree status:** implementation candidate. Component/patch domains, loader registry,
-Fabric plus Forge/NeoForge normalization, staged Java preparation, generated-output verification,
-and receipt schema 2 are present. Cargo validation and real loader smoke sign-off remain pending;
-see the Phase 3 API/security/support/smoke documents.
-
-### Build
-
-- component graph;
-- Fabric provider;
-- NeoForge provider;
-- Forge provider;
-- loader compatibility metadata.
-
-### Exit
-
-All supported loaders converge into `ResolvedMinecraft`; launch orchestration contains no
-loader-specific branches.
-
-## Phase 4 — Instance Engine
-
-### Build
-
-- instance repository;
-- create/delete/rename/clone;
-- global/per-instance config;
-- locking;
-- lockfile;
-- verify/repair.
-
-### Exit
-
-Repair is a planned transaction based on lockfile/filesystem diff.
+**Exit:** repair is a planned transaction based on durable state/filesystem diff rather than ad hoc
+mutation.
 
 ## Phase 5 — Content
 
-### Build
+Local mod scanning, normalized project/version/file/dependency models, provider adapters such as
+Modrinth/CurseForge, hash lookup, install/update, and compatibility/dependency checks.
 
-- local mod scanner;
-- normalized project/version/file/dependency;
-- Modrinth;
-- CurseForge;
-- hash lookup;
-- install/update;
-- dependency checks.
-
-### Exit
-
-Service APIs remain provider-neutral and install/update goes through the artifact/install pipeline.
+**Exit:** provider-neutral service APIs and artifact/install pipeline reuse.
 
 ## Phase 6 — Modpacks
 
-### Build
-
-- `.mrpack`;
-- CurseForge pack;
-- Prism/MultiMC import;
-- generic local/URL archive;
-- Graphene pack format/export.
-
-### Exit
-
-Every format normalizes to a common pack/install model and passes archive security tests.
+`.mrpack`, CurseForge packs, Prism/MultiMC import, generic local/URL archives, and a Graphene pack
+format/export path normalized to a common install model with archive-security coverage.
 
 ## Phase 7 — Diagnostics
 
-### Build
+Verifier, Java diagnostics, crash/log collection, secret redaction, and structured repair
+recommendations that hosts can present without string matching.
 
-- verifier;
-- Java diagnostics;
-- crash report collector;
-- log parser;
-- secret redaction;
-- repair recommendations.
+## Phase 8 — Host integration
 
-### Exit
+Reference CLI plus at least one additional host adapter (for example Tauri or Slint), proving two
+host types can use the same backend logic.
 
-Hosts can present meaningful structured diagnostics without string matching.
+## Priority policy
 
-## Phase 8 — Host Integration
-
-### Build
-
-- reference CLI;
-- Tauri or Slint adapter;
-- second host adapter where useful.
-
-### Exit
-
-At least two host types use the same backend logic.
-
-## Priority Policy
-
-P0 work is anything required to preserve the install-to-launch backbone.
-
-P1 work brings Graphene to a full modern launcher backend.
-
-P2 work is differentiation, convenience, or ecosystem breadth and must not destabilize P0/P1
-boundaries.
+P0 work preserves the install-to-launch backbone and safety boundaries. P1 completes a modern
+launcher backend. P2 is ecosystem breadth/convenience and must not destabilize P0/P1 contracts.

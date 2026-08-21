@@ -2,7 +2,7 @@ use graphene_core::Result;
 use graphene_instance::NewInstanceSpec;
 use graphene_minecraft::{LoaderSelection, MinecraftVersionId};
 
-/// Existing Vanilla create-only request retained for Phase 1 compatibility.
+/// Vanilla create-only installation request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstallRequest {
     pub instance: NewInstanceSpec,

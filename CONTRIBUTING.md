@@ -1,50 +1,33 @@
 # Contributing to Graphene
 
-Graphene uses architecture rules as part of the contribution contract.
+Graphene is a UI-independent launcher engine with deliberately strict boundaries. Keep changes
+focused, preserve public/persisted behavior unless the change explicitly owns a compatibility
+transition, and avoid mixing feature work with broad refactoring.
 
-## Non-Negotiable Rules
+## Non-negotiable rules
 
-1. Domain crates do not depend on UI frameworks.
-2. Domain crates do not depend on concrete providers.
-3. Provider DTOs do not cross adapter boundaries.
-4. No global mutable singleton is required for normal library use.
-5. Raw HTTP calls do not spread through business logic.
-6. Business modules do not implement private download stacks.
-7. Minecraft execution uses argv, not shell-string concatenation.
-8. Public behavior does not depend on parsing human-readable error strings.
-9. Secrets are not written to logs.
-10. Installation and repair go through `InstallPlan`.
-11. Launch execution goes through `LaunchPlan`.
-12. Artifacts are verified when trustworthy hashes are available.
-13. Long operations are cancellable.
-14. Long operations expose unified progress.
-15. Complex instance mutation must provide failure recovery.
-16. Cache/database data is not the sole copy of user-owned instance state.
-17. Public APIs do not expose provider DTOs.
-18. Public APIs do not expose Tauri or Slint types.
-19. New loaders extend component/provider abstractions first.
-20. New content integrations extend `ContentProvider` first.
-21. Pack formats normalize into one install model.
-22. Repair reuses installation execution primitives.
-23. Architectural exceptions require an ADR.
-24. Crate roots are public facades, not business-logic containers. New domain behavior should live
-    in cohesive internal modules and be re-exported deliberately.
-25. Authentication supplies the existing `LaunchSession` through service orchestration;
-    `graphene-launch` does not depend on authentication or provider crates.
-26. Persistent public account metadata never contains authentication credentials; secure secret
-    storage is a separate injected boundary and must fail closed rather than downgrade to plaintext.
-27. Managed Java release metadata resolves to the shared `Artifact` acquisition pipeline; business
-    code does not add a second downloader or execute vendor installer scripts.
-28. Java selection without an explicit ensure/install request remains free of managed-download side
-    effects, and managed runtimes are probed in staging before create-only publication.
+- Keep the root and crate `lib.rs` files thin facades.
+- Keep provider DTOs and transport/process implementation types behind their owning boundaries.
+- Do not introduce forbidden dependency edges or UI framework dependencies into the engine.
+- Preserve transaction, path-containment, integrity, cancellation, secret-redaction, and persistence
+  guarantees.
+- Add tests for durable behavior or risk, at the lowest effective level; do not widen public API for
+  test convenience.
+- Review hand-written production files at 500+ lines, expect decomposition at 800+, and split at
+  1000+ unless a narrow explicit exception exists.
+- Add or extend the one canonical document for a concern instead of creating a parallel policy or
+  phase-owned document.
+- Use ADRs only for durable, high-cost architectural decisions.
+- Keep development-phase chronology in the roadmap rather than source/test/CI names.
 
-## Review Questions
+Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md),
+[`docs/ENGINEERING_STANDARDS.md`](docs/ENGINEERING_STANDARDS.md), and
+[`docs/SECURITY.md`](docs/SECURITY.md) before changing boundaries or trust-sensitive code.
 
-Before merging a cross-crate change, verify:
+## Validation
 
-- the owning bounded context is clear;
-- dependency direction remains one-way;
-- the change does not leak an adapter type inward;
-- the API would still make sense with another UI host;
-- the API would still make sense with another provider;
-- tests cover the deterministic domain behavior.
+Run the repository quality gate described in
+[`docs/ENGINEERING_STANDARDS.md`](docs/ENGINEERING_STANDARDS.md). Keep local CI deterministic:
+normal Cargo tests must not depend on the public internet. Real-provider/runtime smoke procedures
+live in
+[`docs/VALIDATION.md`](docs/VALIDATION.md).

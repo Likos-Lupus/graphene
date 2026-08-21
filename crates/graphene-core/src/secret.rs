@@ -43,9 +43,9 @@ mod tests {
 
     #[test]
     fn formatting_never_reveals_secret() {
-        let secret = SensitiveString::new("phase1-secret-value");
-        assert!(!format!("{secret:?}").contains("phase1-secret-value"));
-        assert!(!format!("{secret}").contains("phase1-secret-value"));
-        assert_eq!(secret.expose_secret(), "phase1-secret-value");
+        let secret = SensitiveString::new("secret-value-never-print");
+        assert!(!format!("{secret:?}").contains("secret-value-never-print"));
+        assert!(!format!("{secret}").contains("secret-value-never-print"));
+        assert_eq!(secret.expose_secret(), "secret-value-never-print");
     }
 }
