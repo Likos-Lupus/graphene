@@ -68,7 +68,7 @@ pub(crate) async fn plan_component_install(
         return Err(GrapheneError::new(
             ErrorCode::LoaderVersionUnsupported,
             ErrorKind::Minecraft,
-            "resolved loader release is not executable by this Phase 3 implementation",
+            "resolved loader release is not executable by this implementation",
         )
         .with_context("loader", kind.to_string())
         .with_context("loader_version", loader.version.to_string())

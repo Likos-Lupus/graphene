@@ -145,7 +145,7 @@ impl std::fmt::Debug for GrapheneBuilder {
 }
 
 impl GrapheneBuilder {
-    /// Creates a builder with conservative foundation and Phase 2 defaults.
+    /// Creates a builder with conservative foundation defaults.
     #[must_use]
     pub fn new(data_root: impl Into<PathBuf>) -> Self {
         Self {
@@ -226,7 +226,7 @@ impl GrapheneBuilder {
         self
     }
 
-    /// Validates configuration, initializes storage, and constructs the shared foundation and Phase 2 services.
+    /// Validates configuration, initializes storage, and constructs the shared foundation services.
     /// A partially initialized [`Graphene`] is never returned.
     pub async fn build(self) -> Result<Graphene> {
         if !(4..=65_536).contains(&self.event_channel_capacity) {

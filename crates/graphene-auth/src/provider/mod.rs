@@ -109,8 +109,8 @@ mod tests {
     use super::*;
     use uuid::Uuid;
 
-    const DEVICE: &str = "PHASE2_DEVICE_CODE_DO_NOT_PRINT";
-    const ACCESS: &str = "PHASE2_ACCESS_TOKEN_DO_NOT_PRINT";
+    const DEVICE: &str = "DEVICE_CODE_DO_NOT_PRINT";
+    const ACCESS: &str = "ACCESS_TOKEN_DO_NOT_PRINT";
 
     #[test]
     fn interaction_debug_redacts_user_code_and_message() {

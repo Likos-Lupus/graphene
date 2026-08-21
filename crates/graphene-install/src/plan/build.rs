@@ -341,7 +341,7 @@ fn installed_argument(value: &Argument) -> Result<InstalledArgument> {
         _ => {
             return Err(install_error(
                 ErrorCode::InstallPlanInvalid,
-                "Minecraft argument variant is unsupported by the Phase 1 receipt",
+                "Minecraft argument variant is unsupported by the install receipt",
             ));
         }
     })

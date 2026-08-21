@@ -20,7 +20,7 @@ pub struct AcquiredArtifact {
     pub disposition: AcquisitionDisposition,
 }
 
-/// Stable installer-owned port implemented by `graphene-service` using Phase 0 acquisition.
+/// Stable installer-owned port implemented by `graphene-service` using verified artifact acquisition.
 pub trait ArtifactAcquirer: Send + Sync {
     fn acquire<'a>(
         &'a self,

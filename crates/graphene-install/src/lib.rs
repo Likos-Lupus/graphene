@@ -1,7 +1,7 @@
-//! Deterministic Phase 1 install planning and transaction-safe create-only execution.
+//! Deterministic install planning and transaction-safe create-only execution.
 //!
 //! Installation owns the artifact-acquisition port but never owns an HTTP client or cache. The
-//! service layer adapts this port to the Phase 0 verified artifact pipeline.
+//! service layer adapts this port to the verified artifact pipeline.
 
 mod acquisition;
 mod archive;

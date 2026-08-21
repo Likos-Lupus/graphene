@@ -130,12 +130,13 @@ fn unavailable() -> graphene_core::GrapheneError {
 mod tests {
     use super::*;
 
-    const TOKEN: &str = "PHASE2_REFRESH_TOKEN_DO_NOT_PRINT";
+    const TOKEN: &str = "REFRESH_TOKEN_DO_NOT_PRINT";
 
     #[test]
     fn record_identity_uses_graphene_namespace_and_account_id() {
         let account_id = AccountId::new();
         let key = SecretRecordIdentity::microsoft_refresh(account_id).key();
+
         assert!(key.starts_with("graphene:microsoft-refresh-v1:"));
         assert!(key.ends_with(&account_id.to_string()));
     }
@@ -145,12 +146,15 @@ mod tests {
         let store = InMemorySecretStore::new_for_tests();
         let identity = SecretRecordIdentity::microsoft_refresh(AccountId::new());
         let credential = RefreshCredential::new(TOKEN);
+
         store.put(&identity, &credential).unwrap();
+
         assert_eq!(
             store.get(&identity).unwrap().unwrap().expose_secret(),
             TOKEN
         );
         assert!(!format!("{credential:?}").contains(TOKEN));
+
         store.delete(&identity).unwrap();
         assert!(store.get(&identity).unwrap().is_none());
     }

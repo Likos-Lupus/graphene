@@ -1,4 +1,4 @@
-//! Graphene's service composition layer through the Phase 3 implementation candidate.
+//! Graphene's service composition layer.
 //!
 //! This crate wires platform, storage, networking, provider adapters, accounts, installation,
 //! managed/local Java selection, launch planning, and process execution. Provider DTOs and domain algorithms remain in their

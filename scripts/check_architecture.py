@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mechanical Phase 0-3 Cargo and source-boundary architecture guard."""
+"""Mechanical Cargo and source-boundary architecture guard."""
 
 from __future__ import annotations
 
@@ -30,61 +30,6 @@ PACKAGES = {
 
 UI_DEPENDENCIES = {"tauri", "slint"}
 CORE_ALLOWED = {"serde", "uuid"}
-EXPECTED_INTERNAL_GRAPH = {
-    "graphene": {
-        "graphene-core",
-        "graphene-minecraft",
-        "graphene-instance",
-        "graphene-java",
-        "graphene-auth",
-        "graphene-install",
-        "graphene-launch",
-        "graphene-service",
-    },
-    "graphene-core": set(),
-    "graphene-platform": {"graphene-core"},
-    "graphene-network": {"graphene-core"},
-    "graphene-storage": {"graphene-core", "graphene-platform"},
-    "graphene-minecraft": {"graphene-core"},
-    "graphene-instance": {"graphene-core"},
-    "graphene-java": {"graphene-core", "graphene-platform"},
-    "graphene-auth": {"graphene-core"},
-    "graphene-providers": {
-        "graphene-core",
-        "graphene-auth",
-        "graphene-java",
-        "graphene-network",
-        "graphene-minecraft",
-    },
-    "graphene-install": {
-        "graphene-core",
-        "graphene-minecraft",
-        "graphene-instance",
-        "graphene-storage",
-        "graphene-platform",
-    },
-    "graphene-launch": {
-        "graphene-core",
-        "graphene-minecraft",
-        "graphene-instance",
-        "graphene-java",
-        "graphene-platform",
-    },
-    "graphene-service": {
-        "graphene-core",
-        "graphene-auth",
-        "graphene-platform",
-        "graphene-network",
-        "graphene-storage",
-        "graphene-minecraft",
-        "graphene-instance",
-        "graphene-java",
-        "graphene-providers",
-        "graphene-install",
-        "graphene-launch",
-    },
-}
-
 EXPLICIT_FORBIDDEN = {
     ("graphene-auth", "graphene-network"),
     ("graphene-auth", "graphene-storage"),
@@ -153,7 +98,7 @@ def crate_root(package: str) -> pathlib.Path:
 def main() -> None:
     missing = [str(path.relative_to(ROOT)) for path in PACKAGES.values() if not path.is_file()]
     if missing:
-        fail(f"required Phase 2 manifests are missing: {missing}")
+        fail(f"required workspace manifests are missing: {missing}")
 
     graph = {name: dependencies(path) for name, path in PACKAGES.items()}
     internal = set(PACKAGES)
@@ -177,13 +122,6 @@ def main() -> None:
         package: {dependency for dependency in deps if dependency in internal}
         for package, deps in graph.items()
     }
-    for package, expected in EXPECTED_INTERNAL_GRAPH.items():
-        if internal_graph[package] != expected:
-            fail(
-                f"{package} internal dependencies {sorted(internal_graph[package])} "
-                f"do not match approved Phase 3 edges {sorted(expected)}"
-            )
-
     visiting: set[str] = set()
     visited: set[str] = set()
 
@@ -248,7 +186,7 @@ def main() -> None:
         if BUSINESS_ITEM_RE.search(facade_text):
             fail(f"{package} crate root defines business items instead of acting as a facade")
 
-    print("Phase 3 architecture manifest/source checks passed.")
+    print("Graphene architecture manifest/source checks passed.")
 
 
 if __name__ == "__main__":

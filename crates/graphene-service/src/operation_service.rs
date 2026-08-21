@@ -138,7 +138,7 @@ impl OperationService {
     }
 }
 
-/// Opaque future + operation handle for the synthetic Phase 0 demonstration.
+/// Opaque future + operation handle for the synthetic operation demonstration.
 pub struct SyntheticOperation {
     operation: OperationHandle,
     future: Pin<Box<dyn Future<Output = graphene_core::Result<()>> + Send + 'static>>,

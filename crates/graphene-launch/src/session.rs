@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn session_and_secret_argument_debug_are_redacted() {
-        let secret = "phase1-access-token-never-print";
+        let secret = "access-token-never-print";
         let session = LaunchSession {
             username: "Fixture Player".into(),
             uuid: "00000000-0000-0000-0000-000000000001".into(),
