@@ -79,7 +79,7 @@ impl InstallToolRunner for ServiceInstallToolRunner {
         })
     }
 
-    fn run(&self, request: ToolRunRequest) -> ToolRunnerFuture {
+    fn run(&self, request: ToolRunRequest) -> ToolRunnerFuture<'_> {
         Box::pin(async move { run_tool(request).await })
     }
 }

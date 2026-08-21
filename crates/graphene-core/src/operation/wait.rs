@@ -8,7 +8,7 @@ use std::{
 
 /// Runtime-independent future for a retained terminal result.
 pub struct OperationWaitFuture {
-    pub(crate) record: Arc<OperationRecord>,
+    pub(super) record: Arc<OperationRecord>,
 }
 
 impl Future for OperationWaitFuture {

@@ -3,7 +3,7 @@ use crate::{
     acquisition::AcquiredArtifact,
     archive,
     error::{cancelled_error, install_error},
-    r#mod::{
+    generated::{
         locally_derived_sha256, reusable_generated_output, verify_and_publish_generated_output,
     },
     path::minecraft_path_to_platform,

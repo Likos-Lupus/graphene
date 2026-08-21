@@ -50,7 +50,7 @@ struct MutableOperation {
 }
 
 #[derive(Debug)]
-struct OperationRecord {
+pub(super) struct OperationRecord {
     state: Mutex<MutableOperation>,
     cancellation: CancellationToken,
     event_capacity: usize,

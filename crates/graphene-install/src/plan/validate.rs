@@ -306,7 +306,7 @@ fn validate_preparation(plan: &InstallPlan, ids: &HashMap<ArtifactId, &Artifact>
             || output.input_identity.contains('\0')
             || output
                 .expected_size
-                .is_some_and(|size| size > crate::r#mod::MAX_GENERATED_OUTPUT_BYTES)
+                .is_some_and(|size| size > crate::generated::MAX_GENERATED_OUTPUT_BYTES)
             || !processor_ids.contains(output.producer.as_str())
         {
             return Err(install_error(
