@@ -10,5 +10,8 @@ graphene-core.workspace = true
 fs2.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [target.'cfg(unix)'.dependencies]
 libc.workspace = true

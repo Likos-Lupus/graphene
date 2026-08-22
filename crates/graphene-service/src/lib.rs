@@ -13,6 +13,7 @@ mod component_install;
 mod context;
 mod install_service;
 mod install_tool_runner;
+mod instance_service;
 mod java_service;
 mod launch_service;
 mod loader_service;
@@ -26,6 +27,10 @@ pub use artifact_service::{
 };
 pub use builder::{Graphene, GrapheneBuilder, PlatformInfo};
 pub use install_service::{InstallExecutionOperation, InstallPlanOperation, InstallService};
+pub use instance_service::{
+    InstanceCloneOperation, InstanceDeleteOperation, InstanceRepairOperation, InstanceRepository,
+    InstanceService, InstanceVerifyOperation,
+};
 pub use java_service::{JavaService, ManagedJavaOperation};
 pub use launch_service::LaunchService;
 pub use loader_service::{LoaderResolveOperation, LoaderService, LoaderVersionsOperation};

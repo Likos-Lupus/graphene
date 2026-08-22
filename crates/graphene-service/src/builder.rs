@@ -110,6 +110,12 @@ impl Graphene {
     pub fn launch(&self) -> LaunchService {
         LaunchService::new(Arc::clone(&self.context))
     }
+
+    /// Returns the instance inventory, configuration, verification, and lifecycle service.
+    #[must_use]
+    pub fn instances(&self) -> crate::instance_service::InstanceService {
+        crate::instance_service::InstanceService::new(Arc::clone(&self.context))
+    }
 }
 
 /// Validating constructor for a fully initialized Graphene engine.

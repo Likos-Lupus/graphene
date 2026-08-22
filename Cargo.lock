@@ -323,6 +323,7 @@ dependencies = [
  "graphene-core",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
@@ -377,6 +378,7 @@ dependencies = [
  "fs2",
  "graphene-core",
  "libc",
+ "tempfile",
  "tokio",
 ]
 
@@ -411,6 +413,9 @@ dependencies = [
  "graphene-providers",
  "graphene-storage",
  "serde_json",
+ "sha1",
+ "sha2",
+ "tempfile",
  "tokio",
  "tracing",
 ]
@@ -423,6 +428,7 @@ dependencies = [
  "graphene-platform",
  "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

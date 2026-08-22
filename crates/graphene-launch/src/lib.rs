@@ -8,10 +8,11 @@ mod session;
 
 pub use plan::{
     EnvironmentDelta, LaunchArgument, LaunchPlan, RedactedLaunchPlan, plan_from_committed,
+    plan_with_committed,
 };
 pub use process::{
     DEFAULT_GAME_EVENT_CAPACITY, GameEvent, GameEventStream, GameExit, MAX_PROCESS_CHUNK_BYTES,
-    RunningGame, execute,
+    RunningGame, execute, execute_with_lease,
 };
 pub use request::{LaunchRequest, LaunchResolution};
 pub use session::LaunchSession;

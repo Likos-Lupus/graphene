@@ -10,6 +10,7 @@ pub(crate) fn write_new_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
             "atomic write destination has no parent",
         )
     })?;
+    graphene_platform::ensure_directory(parent)?;
     let file_name = path.file_name().ok_or_else(|| {
         GrapheneError::new(
             ErrorCode::FileWriteFailed,

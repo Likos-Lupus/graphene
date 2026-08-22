@@ -15,6 +15,66 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Reconstructs launch state from pre-loaded committed metadata without direct file reads of metadata.
+pub async fn plan_with_committed(
+    data_root: &Path,
+    request: &LaunchRequest,
+    descriptor: &InstanceDescriptor,
+    receipt: &InstallReceipt,
+    java: JavaRuntime,
+) -> Result<LaunchPlan> {
+    request.validate()?;
+    descriptor.validate().map_err(|source| {
+        launch_error(
+            ErrorCode::LaunchInstanceInvalid,
+            "committed instance descriptor failed validation",
+        )
+        .with_source(source)
+    })?;
+    if descriptor.instance_id != request.instance_id {
+        return Err(launch_error(
+            ErrorCode::LaunchInstanceInvalid,
+            "committed instance identity does not match the request",
+        ));
+    }
+    receipt.validate().map_err(|source| {
+        launch_error(
+            ErrorCode::LaunchInstanceInvalid,
+            "committed install receipt is invalid",
+        )
+        .with_source(source)
+    })?;
+    if receipt.instance_id != request.instance_id {
+        return Err(launch_error(
+            ErrorCode::LaunchInstanceInvalid,
+            "install receipt identity does not match the request",
+        ));
+    }
+
+    let instance_root = data_root
+        .join("instances")
+        .join(request.instance_id.to_string());
+    validate_directory(data_root, "data root")?;
+    validate_directory(&data_root.join("instances"), "instances root")?;
+    validate_directory(&instance_root, "instance root")?;
+
+    let data_root = data_root.to_path_buf();
+    let request = request.clone();
+    let receipt = receipt.clone();
+
+    tokio::task::spawn_blocking(move || {
+        build_plan(&data_root, &instance_root, &request, &receipt, java)
+    })
+    .await
+    .map_err(|source| {
+        launch_error(
+            ErrorCode::LaunchPlanInvalid,
+            "launch filesystem validation worker failed",
+        )
+        .with_source(source)
+    })?
+}
+
 /// Reconstructs launch state exclusively from committed local metadata and local paths.
 pub async fn plan_from_committed(
     data_root: &Path,
@@ -47,20 +107,6 @@ pub async fn plan_from_committed(
             )
             .with_source(source)
         })?;
-    descriptor.validate().map_err(|source| {
-        launch_error(
-            ErrorCode::LaunchInstanceInvalid,
-            "committed instance descriptor failed validation",
-        )
-        .with_source(source)
-    })?;
-
-    if descriptor.instance_id != request.instance_id {
-        return Err(launch_error(
-            ErrorCode::LaunchInstanceInvalid,
-            "committed instance identity does not match the request",
-        ));
-    }
 
     let receipt_bytes = tokio::fs::read(instance_root.join(".graphene/install.json"))
         .await
@@ -79,27 +125,7 @@ pub async fn plan_from_committed(
         .with_source(source)
     })?;
 
-    if receipt.instance_id != request.instance_id {
-        return Err(launch_error(
-            ErrorCode::LaunchInstanceInvalid,
-            "install receipt identity does not match the request",
-        ));
-    }
-
-    let data_root = data_root.to_path_buf();
-    let request = request.clone();
-
-    tokio::task::spawn_blocking(move || {
-        build_plan(&data_root, &instance_root, &request, &receipt, java)
-    })
-    .await
-    .map_err(|source| {
-        launch_error(
-            ErrorCode::LaunchPlanInvalid,
-            "launch filesystem validation worker failed",
-        )
-        .with_source(source)
-    })?
+    plan_with_committed(data_root, request, &descriptor, &receipt, java).await
 }
 
 pub(super) fn instance_working_directory(instance_root: &Path) -> PathBuf {
@@ -254,6 +280,7 @@ fn build_plan(
         main_class: receipt.main_class.clone(),
         game_args,
         natives_directory,
+        state_fingerprint: None,
     };
     plan.validate()?;
 

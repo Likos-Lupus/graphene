@@ -1,6 +1,5 @@
 use crate::{context::ServiceContext, operation_lifecycle};
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, InstanceId, OperationHandle, Result};
-use graphene_instance::InstallReceipt;
 use graphene_java::{
     JavaArchitecture, JavaRequirement, JavaRuntime, ManagedJavaRuntime, select_java,
     select_managed_runtime,
@@ -168,14 +167,8 @@ impl JavaService {
     }
 
     async fn requirement_for_instance(&self, instance_id: InstanceId) -> Result<JavaRequirement> {
-        let receipt_path = self
-            .context
-            .storage
-            .path()
-            .join("instances")
-            .join(instance_id.to_string())
-            .join(".graphene/install.json");
-        let bytes = tokio::fs::read(&receipt_path).await.map_err(|source| {
+        let repo = crate::instance_service::InstanceRepository::new(self.context.storage.path());
+        let receipt = repo.load_receipt(instance_id).map_err(|source| {
             GrapheneError::new(
                 ErrorCode::LaunchInstanceInvalid,
                 ErrorKind::Launch,
@@ -183,15 +176,6 @@ impl JavaService {
             )
             .with_source(source)
         })?;
-
-        let receipt = InstallReceipt::from_json(&bytes)?;
-        if receipt.instance_id != instance_id {
-            return Err(GrapheneError::new(
-                ErrorCode::LaunchInstanceInvalid,
-                ErrorKind::Launch,
-                "install receipt identity does not match Java selection request",
-            ));
-        }
 
         Ok(JavaRequirement {
             major_version: receipt.java_requirement.major_version,

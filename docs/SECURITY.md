@@ -32,9 +32,19 @@ configuration remains a trust decision.
 - Final cache/instance/runtime publication is staged and uses cooperating/atomic no-replace or safe
   replacement semantics appropriate to the operation.
 - Persisted instance/runtime paths are relative managed paths rather than absolute host paths.
+- Recursive clone, verify, and delete directory walkers strictly reject symbolic links, FIFOs,
+  sockets, and character/block devices.
+- Instance clone streams all file copies in bounded chunks and never creates ambiguous mutable
+  hard-link or reflink aliases with the source.
+- Instance delete atomically renames the instance tree into quarantine trash
+  (`instances/.trash/<id>-<op_id>`) on the same filesystem before recursive cleanup, ensuring
+  deletion commits immediately without race conditions.
+- Lockfiles and repair plans are treated as untrusted input with strict size bounds (e.g. 1 MiB
+  lockfile, 64 KiB config, 64 KiB descriptor) and revalidated source URLs.
 
 Unknown user files are not treated as disposable Graphene state merely because they share the data
-root.
+root. User-owned content under `.minecraft` (worlds, screenshots, custom logs) is never scanned or
+hashed during verification unless explicitly declared in desired state.
 
 ## Archive boundary
 

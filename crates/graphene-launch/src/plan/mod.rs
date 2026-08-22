@@ -61,6 +61,7 @@ pub struct LaunchPlan {
     pub main_class: String,
     pub game_args: Vec<LaunchArgument>,
     pub natives_directory: PathBuf,
+    pub state_fingerprint: Option<graphene_instance::InstanceStateFingerprint>,
 }
 
 impl std::fmt::Debug for LaunchPlan {
@@ -165,4 +166,4 @@ impl LaunchPlan {
     }
 }
 
-pub use build::plan_from_committed;
+pub use build::{plan_from_committed, plan_with_committed};

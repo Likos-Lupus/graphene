@@ -25,6 +25,7 @@ pub struct RunningGame {
     pub(super) terminal: Arc<AsyncMutex<Option<Terminal>>>,
     pub(super) terminal_notify: Arc<Notify>,
     pub(super) dropped_output: Arc<AtomicU64>,
+    pub(super) _lease: Option<Arc<dyn std::any::Any + Send + Sync>>,
 }
 
 impl std::fmt::Debug for RunningGame {
@@ -104,6 +105,7 @@ impl RunningGame {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn monitor_process(
     mut process: PlatformProcess,
     mut control: mpsc::Receiver<Control>,
@@ -112,6 +114,7 @@ pub(super) async fn monitor_process(
     sender: mpsc::Sender<GameEvent>,
     terminal: Arc<AsyncMutex<Option<Terminal>>>,
     notify: Arc<Notify>,
+    _lease: Option<Arc<dyn std::any::Any + Send + Sync>>,
 ) {
     let mut killed = false;
     let exit_result = loop {
@@ -208,6 +211,7 @@ mod tests {
             })))),
             terminal_notify: Arc::new(Notify::new()),
             dropped_output: Arc::new(AtomicU64::new(0)),
+            _lease: None,
         };
 
         game.kill().await.expect("terminal kill is idempotent");

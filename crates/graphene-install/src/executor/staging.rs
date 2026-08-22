@@ -1,7 +1,9 @@
 use super::spawn_blocking_install;
 use crate::{error::install_error, plan::InstallPlan};
 use graphene_core::{ErrorCode, Result};
-use graphene_instance::{InstallReceipt, InstanceDescriptor, ManagedRelativePath as ReceiptPath};
+use graphene_instance::{
+    InstallReceipt, InstanceDescriptor, InstanceLockfile, ManagedRelativePath as ReceiptPath,
+};
 use std::{
     fs,
     io::ErrorKind as IoErrorKind,
@@ -68,6 +70,37 @@ pub(super) async fn validate_staging(
         return Err(install_error(
             ErrorCode::InstallValidationFailed,
             "staged install receipt differs from the plan",
+        ));
+    }
+
+    let lockfile_bytes = tokio::fs::read(staging.join(".graphene/lock.json"))
+        .await
+        .map_err(|source| {
+            install_error(
+                ErrorCode::InstallValidationFailed,
+                "staged instance lockfile is unreadable",
+            )
+            .with_source(source)
+        })?;
+    let lockfile: InstanceLockfile = serde_json::from_slice(&lockfile_bytes).map_err(|source| {
+        install_error(
+            ErrorCode::InstallValidationFailed,
+            "staged instance lockfile does not round-trip",
+        )
+        .with_source(source)
+    })?;
+    lockfile.validate().map_err(|source| {
+        install_error(
+            ErrorCode::InstallValidationFailed,
+            "staged instance lockfile is invalid",
+        )
+        .with_source(source)
+    })?;
+
+    if lockfile.instance_id != plan.instance.descriptor.instance_id {
+        return Err(install_error(
+            ErrorCode::InstallValidationFailed,
+            "staged instance lockfile identity does not match plan",
         ));
     }
 

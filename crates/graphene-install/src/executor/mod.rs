@@ -22,14 +22,19 @@ use crate::{
     processor::InstallToolRunner,
 };
 use graphene_core::{ArtifactId, ErrorCode, OperationController, Progress, Result};
-use graphene_instance::CommittedInstance;
-use graphene_platform::{ManagedRelativePath, publish_directory_create_only};
+use graphene_instance::{
+    CommittedInstance, InstanceLockfile, InstanceStatus, LOCKFILE_SCHEMA_VERSION, LockedArtifact,
+    LockedGeneratedOutput, LockedMaterializationScope, LockedNativeExtraction,
+    ManagedRelativePath as InstanceManagedPath,
+};
+use graphene_platform::publish_directory_create_only;
 use graphene_storage::DataRoot;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs,
     io::ErrorKind as IoErrorKind,
     path::Path,
+    str::FromStr,
     sync::Arc,
 };
 
@@ -83,7 +88,7 @@ impl InstallExecutor {
         )?;
         reject_existing_target(&final_root)?;
 
-        let staging_relative = ManagedRelativePath::new(format!(
+        let staging_relative = graphene_platform::ManagedRelativePath::new(format!(
             "instances/.staging/{}-{}",
             plan.instance.descriptor.instance_id,
             operation.handle().id()
@@ -304,7 +309,14 @@ impl InstallExecutor {
 
         checkpoint(operation)?;
         operation.set_stage("write-metadata")?;
-        write_instance_metadata(staging_root, &plan.instance.descriptor, &plan.receipt).await?;
+        let lockfile = assemble_lockfile(self.data_root.path(), plan)?;
+        write_instance_metadata(
+            staging_root,
+            &plan.instance.descriptor,
+            &plan.receipt,
+            &lockfile,
+        )
+        .await?;
 
         checkpoint(operation)?;
         operation.set_stage("validate-staging")?;
@@ -342,6 +354,8 @@ impl InstallExecutor {
 
         Ok(CommittedInstance {
             descriptor: plan.instance.descriptor.clone(),
+            receipt: plan.receipt.clone(),
+            status: InstanceStatus::Ready,
         })
     }
 }
@@ -364,4 +378,117 @@ fn checkpoint(operation: &OperationController) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+fn assemble_lockfile(data_root: &Path, plan: &InstallPlan) -> Result<InstanceLockfile> {
+    let mut artifacts = Vec::new();
+    let mut artifact_map: HashMap<ArtifactId, &crate::plan::PlannedArtifact> = HashMap::new();
+    for planned in &plan.artifacts {
+        artifact_map.insert(planned.artifact.id, planned);
+    }
+
+    for mat in &plan.shared_materializations {
+        if let Some(planned) = artifact_map.get(&mat.artifact_id) {
+            let dest_path = InstanceManagedPath::new(mat.destination.as_str())?;
+            artifacts.push(LockedArtifact {
+                logical_key: format!("shared:{}", mat.destination.as_str()),
+                kind: planned.artifact.kind,
+                sources: planned.artifact.sources.clone(),
+                destination: dest_path,
+                scope: LockedMaterializationScope::SharedImmutable,
+                integrity: planned.artifact.integrity.clone(),
+                expected_size: planned.artifact.expected_size,
+            });
+        }
+    }
+
+    for mat in &plan.instance_materializations {
+        if let Some(planned) = artifact_map.get(&mat.artifact_id) {
+            let dest_path = InstanceManagedPath::new(mat.destination.as_str())?;
+            artifacts.push(LockedArtifact {
+                logical_key: format!("instance:{}", mat.destination.as_str()),
+                kind: planned.artifact.kind,
+                sources: planned.artifact.sources.clone(),
+                destination: dest_path,
+                scope: LockedMaterializationScope::InstanceMutable,
+                integrity: planned.artifact.integrity.clone(),
+                expected_size: planned.artifact.expected_size,
+            });
+        }
+    }
+
+    let mut native_extractions = Vec::new();
+    for ext in &plan.native_extractions {
+        let archive_dest = plan
+            .shared_materializations
+            .iter()
+            .find(|m| m.artifact_id == ext.artifact_id)
+            .map(|m| m.destination.as_str())
+            .unwrap_or("");
+        if let Ok(archive_rel) = InstanceManagedPath::new(archive_dest) {
+            let dest_dir = InstanceManagedPath::new(ext.destination.as_str())?;
+            native_extractions.push(LockedNativeExtraction {
+                archive_path: archive_rel,
+                destination_dir: dest_dir,
+                exclude_patterns: vec!["META-INF/".to_string()],
+            });
+        }
+    }
+
+    let mut generated_outputs = Vec::new();
+    for output in &plan.preparation.generated_outputs {
+        let dest_rel = InstanceManagedPath::new(output.managed_destination.as_str())?;
+        let full_output_path = data_root.join(output.managed_destination.as_str());
+        if full_output_path.exists() {
+            let meta = fs::metadata(&full_output_path).map_err(|source| {
+                install_error(
+                    ErrorCode::InstallValidationFailed,
+                    "failed to inspect generated output file",
+                )
+                .with_source(source)
+            })?;
+            let size = meta.len();
+            let sha256_hex = crate::generated::locally_derived_sha256(
+                &full_output_path,
+                &graphene_core::CancellationToken::new(),
+            )?;
+            let sha256 = graphene_core::Sha256Digest::from_str(&sha256_hex).map_err(|source| {
+                install_error(
+                    ErrorCode::InstallValidationFailed,
+                    "invalid generated output sha256 digest",
+                )
+                .with_source(source)
+            })?;
+            let component = plan.preparation.component.as_ref();
+            let uid = component.map(|c| c.uid.as_str()).unwrap_or("").to_string();
+            let version = component
+                .map(|c| c.version.as_str())
+                .unwrap_or("")
+                .to_string();
+            let provider = component
+                .map(|c| c.provenance.provider.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            generated_outputs.push(LockedGeneratedOutput {
+                destination: dest_rel,
+                sha256,
+                size,
+                component_uid: uid,
+                component_version: version,
+                provider,
+                input_sha256: BTreeMap::new(),
+            });
+        }
+    }
+
+    Ok(InstanceLockfile {
+        schema_version: LOCKFILE_SCHEMA_VERSION,
+        instance_id: plan.instance.descriptor.instance_id,
+        minecraft_version: plan.receipt.requested_version.clone(),
+        components: plan.receipt.components.clone(),
+        artifacts,
+        native_extractions,
+        generated_outputs,
+    })
 }

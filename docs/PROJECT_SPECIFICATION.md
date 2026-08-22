@@ -28,7 +28,10 @@ The engine owns these product responsibilities:
 - provider-neutral accounts, Microsoft authentication adapter support, and injected secure secret
   storage;
 - direct-argv Minecraft/process execution with bounded lifecycle/output events;
-- Fabric, Forge, and NeoForge provider adapters that normalize into shared domain/install models.
+- Fabric, Forge, and NeoForge provider adapters that normalize into shared domain/install models;
+- mutable instance engine with persistent advisory file locks, inventory discovery, configuration
+  hierarchy, lifecycle transactions (rename, clone, quarantine delete), structural/full
+  verification, and deterministic repair.
 
 The current public behavior is described in [`API.md`](API.md). Evidence-based loader limitations
 are in [`LOADER_SUPPORT.md`](LOADER_SUPPORT.md).

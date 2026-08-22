@@ -101,11 +101,7 @@ pub(crate) async fn plan_component_install(
 }
 
 fn reject_existing_target(context: &ServiceContext, id: graphene_core::InstanceId) -> Result<()> {
-    let target = context
-        .storage
-        .path()
-        .join("instances")
-        .join(id.to_string());
+    let target = graphene_storage::InstancePaths::new(context.storage.path()).instance_root(id);
 
     match fs::symlink_metadata(&target) {
         Ok(_) => Err(GrapheneError::new(

@@ -86,6 +86,17 @@ fn materialize_classpath(classpath: &[PathBuf], separator: char) -> Result<Strin
 
 /// Spawns Java directly. Secrets are exposed only while constructing this child-process argv.
 pub fn execute(plan: LaunchPlan, event_capacity: usize) -> Result<RunningGame> {
+    execute_with_lease(plan, event_capacity, None)
+}
+
+/// Spawns Java directly while taking ownership of an opaque runtime lease token.
+///
+/// The lease token remains held until the child process terminates and the running game handle is dropped.
+pub fn execute_with_lease(
+    plan: LaunchPlan,
+    event_capacity: usize,
+    lease_token: Option<Box<dyn std::any::Any + Send + Sync>>,
+) -> Result<RunningGame> {
     if !(4..=65_536).contains(&event_capacity) {
         return Err(launch_error(
             ErrorCode::LaunchPlanInvalid,
@@ -125,6 +136,8 @@ pub fn execute(plan: LaunchPlan, event_capacity: usize) -> Result<RunningGame> {
     let terminal_notify = Arc::new(Notify::new());
     let dropped_output = Arc::new(AtomicU64::new(0));
 
+    let lease_arc = lease_token.map(Arc::from);
+
     let _ = event_sender.try_send(GameEvent::Started { pid });
     let stdout_task = tokio::spawn(drain_output(
         stdout,
@@ -147,6 +160,7 @@ pub fn execute(plan: LaunchPlan, event_capacity: usize) -> Result<RunningGame> {
         event_sender,
         Arc::clone(&terminal),
         Arc::clone(&terminal_notify),
+        lease_arc.clone(),
     ));
 
     Ok(RunningGame {
@@ -156,6 +170,7 @@ pub fn execute(plan: LaunchPlan, event_capacity: usize) -> Result<RunningGame> {
         terminal,
         terminal_notify,
         dropped_output,
+        _lease: lease_arc,
     })
 }
 
