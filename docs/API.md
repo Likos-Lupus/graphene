@@ -25,7 +25,82 @@ layout, and composes one engine. Multiple engines may coexist with separate root
 install a process-global async runtime or tracing subscriber.
 
 The facade exposes services through `operations()`, `accounts()`, `artifacts()`, `minecraft()`,
-`loaders()`, `install()`, `java()`, and `launch()`.
+`loaders()`, `install()`, `java()`, `launch()`, and `instances()`.
+
+## Instance engine and lifecycle
+
+`graphene.instances()` provides `InstanceService` for inventory inspection, global and per-instance
+configuration, lifecycle transactions (rename, clone, delete), structural/cryptographic
+verification, and deterministic repair.
+
+### Common repository & inventory
+
+- `graphene.instances().list().await?`: returns deterministic `Vec<InstanceInventoryEntry>` sorted
+  by `InstanceId`. Entries are classified as `Ready` (descriptor + receipt + lockfile valid),
+  `Legacy` (valid descriptor + receipt, missing lockfile), or `Invalid` (malformed on-disk
+  metadata).
+- `graphene.instances().get(instance_id).await?`: loads and returns the committed
+  `CommittedInstance` record.
+
+### Configuration hierarchy & tri-state updates
+
+Configuration evaluation precedence:
+`built-in defaults < global defaults (config/instance-defaults.json) < per-instance explicit overrides (instances/<id>/.graphene/config.json)`
+
+Explicit tri-state update semantics are modeled via `SettingUpdate<T>`:
+
+- `SettingUpdate::Unchanged`: leaves existing setting unchanged.
+- `SettingUpdate::Set(T)`: sets an explicit configuration override.
+- `SettingUpdate::Inherit`: clears explicit override, resetting to inherit from higher precedence.
+
+Methods:
+
+- `global_defaults().await?` / `update_global_defaults(patch).await?`
+- `effective_config(instance_id).await?` / `update_config(instance_id, patch).await?` (holds
+  exclusive lease during update)
+
+### Advisory lease model & concurrency
+
+All instance operations synchronize across processes using OS-level advisory file locks (`fs2`)
+backed by persistent carrier files (`instances/.locks/<id>.lock`). Lock carrier files are persistent
+infrastructure and are never deleted on unlock.
+
+- **Shared Lease (`InstanceSharedLease`)**: acquired during launch planning, process runtime
+  execution (`RunningGame`), and instance verification scans.
+- **Exclusive Lease (`InstanceExclusiveLease`)**: acquired during install staging/publication,
+  config mutation, rename, clone destination/source staging, delete quarantine, and repair
+  execution.
+- Contention maps directly to a typed `ErrorCode::InstanceBusy` error.
+- Multi-instance operations (e.g. clone) acquire leases in deterministic sorted `InstanceId` order
+  to prevent deadlocks.
+
+### Rename, clone, and delete transactions
+
+- `rename(instance_id, display_name)`: updates only `instance.json` display metadata under an
+  exclusive lease.
+- `clone(instance_id, request)`: returns `InstanceCloneOperation` copying instance files into
+  staging without following symlinks, rewriting instance identities in all Graphene-owned metadata
+  documents, and publishing create-only.
+- `delete(instance_id, options)`: returns `InstanceDeleteOperation` performing atomic directory
+  rename into quarantine trash (`instances/.trash/<id>-<op_id>`) as the point-of-no-return commit
+  boundary, followed by best-effort cleanup.
+
+### Verification and deterministic repair
+
+- `verify(instance_id, mode)`: returns `InstanceVerifyOperation` generating a `VerificationReport`
+  with structured `VerificationFinding` entries.
+    - `VerificationMode::Quick`: structural, schema, and file-size presence checks without computing
+      cryptographic hashes on large files.
+    - `VerificationMode::Full`: streams cryptographic SHA-1 and SHA-256 hashes for all
+      Graphene-managed files declared in desired state.
+- `plan_repair(instance_id, options)`: derives a deterministic, non-mutating `RepairPlan` with
+  closed action vocabulary (`AcquireArtifact`, `RestoreSharedMaterialization`,
+  `RestoreInstanceMaterialization`, `RebuildNativeState`, `RunPreparation`,
+  `RestoreGeneratedOutput`, `RewriteInstallReceipt`, `FinalizeLockfileMigration`).
+- `execute_repair(plan)`: returns `InstanceRepairOperation` executing the plan through shared
+  install primitives under an exclusive lease. Stale plans whose base state fingerprint differs from
+  current disk state are rejected with `ErrorCode::InstanceRepairPlanStale`. Successful repair
+  converges to a no-op second plan.
 
 ## Operations, errors, and diagnostics
 

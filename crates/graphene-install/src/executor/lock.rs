@@ -1,11 +1,7 @@
 use crate::error::install_error;
 use graphene_core::{ErrorCode, InstanceId, Result};
-use graphene_platform::{ManagedRelativePath, ensure_managed_directory};
-use std::{
-    fs,
-    io::ErrorKind as IoErrorKind,
-    path::{Path, PathBuf},
-};
+use graphene_storage::{InstanceExclusiveLease, InstanceLeaseStore, InstancePaths};
+use std::{fs, io::ErrorKind as IoErrorKind, path::Path};
 
 pub(super) fn reject_existing_target(path: &Path) -> Result<()> {
     match fs::symlink_metadata(path) {
@@ -23,35 +19,24 @@ pub(super) fn reject_existing_target(path: &Path) -> Result<()> {
 }
 
 pub(super) struct InstanceInstallLock {
-    path: PathBuf,
-    _file: fs::File,
+    _lease: InstanceExclusiveLease,
 }
 
 impl InstanceInstallLock {
     pub(super) fn acquire(data_root: &Path, id: InstanceId) -> Result<Self> {
-        let relative = ManagedRelativePath::new("instances/.install-locks")?;
-        let root = ensure_managed_directory(data_root, &relative)?;
-        let path = root.join(format!("{id}.lock"));
-        let file = fs::OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(&path)
-            .map_err(|source| {
-                let code = if source.kind() == IoErrorKind::AlreadyExists {
-                    ErrorCode::InstallTargetExists
-                } else {
-                    ErrorCode::InstallStageFailed
-                };
-                install_error(code, "failed to reserve create-only instance target")
-                    .with_source(source)
-            })?;
+        let paths = InstancePaths::new(data_root);
+        let store = InstanceLeaseStore::new(paths);
+        let lease = store.acquire_exclusive(id).map_err(|err| {
+            if err.code == ErrorCode::InstanceBusy {
+                install_error(
+                    ErrorCode::InstallTargetExists,
+                    "failed to reserve instance target: instance is busy or lock is held",
+                )
+            } else {
+                err
+            }
+        })?;
 
-        Ok(Self { path, _file: file })
-    }
-}
-
-impl Drop for InstanceInstallLock {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
+        Ok(Self { _lease: lease })
     }
 }

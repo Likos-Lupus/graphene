@@ -38,11 +38,16 @@ smokes and Rust quality gates remain pending. See `LOADER_SUPPORT.md` and `VALID
 
 ## Phase 4 — Instance engine
 
-Instance repository, create/delete/rename/clone, global/per-instance configuration, locking,
-lockfiles, verify, and repair.
+Centralized committed-state repository, resilient inventory discovery, global defaults and
+per-instance configuration hierarchy with explicit tri-state patch semantics, cross-process advisory
+shared/exclusive leases (`fs2`) backed by persistent carriers, schema-versioned provider-neutral
+desired-state lockfile, runtime lease retention with stale-plan protection, atomic rename, streamed
+containment-safe clone, quarantine delete transactions, quick and full verification, and
+deterministic repair planning and execution reusing install primitives.
 
-**Exit:** repair is a planned transaction based on durable state/filesystem diff rather than ad hoc
-mutation.
+**Exit:** repair is a deterministic planned transaction derived from durable desired state plus a
+filesystem diff, mutable instance operations share one repository/lease/transaction model, and no
+Phase 4 capability depends on ad hoc mutation or provider-specific persisted state.
 
 ## Phase 5 — Content
 

@@ -20,3 +20,8 @@ graphene-providers.workspace = true
 graphene-install.workspace = true
 graphene-launch.workspace = true
 serde_json.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

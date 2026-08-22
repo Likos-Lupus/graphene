@@ -110,6 +110,27 @@ Install-tool execution is dependency-inverted: the install domain describes expl
 inputs; service selects Java and performs bounded direct execution. Provider/install metadata cannot
 silently request arbitrary shell/script/native execution.
 
+## Instance repository, advisory lease model, and desired state
+
+Instance management is unified in one cross-process architecture:
+
+- **Repository**: `InstanceRepository` provides the single authority for loading, validating, and
+  updating instance metadata documents (`instance.json`, `.graphene/install.json`,
+  `.graphene/lock.json`, `.graphene/config.json`, and `config/instance-defaults.json`).
+- **Advisory lease model**: OS-level shared/exclusive file locks backed by persistent carrier files
+  at `instances/.locks/<id>.lock`. Carriers are persistent infrastructure and are never deleted on
+  unlock.
+- **Desired-state lockfile**: `instances/<id>/.graphene/lock.json` persists exact reconstructable
+  artifact sources, hashes, sizes, scopes, native extractions, and generated outputs. It serves as
+  the single source of truth for verification and repair.
+- **Runtime lease ownership**: Launch acquires a shared lease and verifies that the plan's
+  `InstanceStateFingerprint` matches current disk state. Upon process spawn, ownership of the shared
+  lease transfers into `RunningGame` / background monitor task until process termination, preventing
+  concurrent delete, repair, or mutation while a game is running.
+- **Deterministic repair orchestration**: Repair is split into planning (deriving a non-mutating
+  `RepairPlan` from desired state vs. filesystem observations) and execution (applying actions via
+  existing install acquisition and materialization primitives under an exclusive lease).
+
 ## Storage and archive boundaries
 
 `graphene-storage` owns the data root, containment, and publication policy. Paths crossing managed

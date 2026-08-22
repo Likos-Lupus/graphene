@@ -17,7 +17,7 @@ impl std::error::Error for IdParseError {}
 macro_rules! typed_id {
     ($name:ident) => {
         #[doc = concat!("Opaque strongly typed Graphene identifier: `", stringify!($name), "`.")]
-        #[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
         #[serde(transparent)]
         pub struct $name(Uuid);
 

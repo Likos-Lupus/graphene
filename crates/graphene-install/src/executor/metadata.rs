@@ -1,7 +1,7 @@
 use super::spawn_blocking_install;
 use crate::error::install_error;
 use graphene_core::{ErrorCode, Result};
-use graphene_instance::{InstallReceipt, InstanceDescriptor};
+use graphene_instance::{InstallReceipt, InstanceDescriptor, InstanceLockfile};
 use std::{
     fs,
     io::Write,
@@ -12,11 +12,19 @@ pub(super) async fn write_instance_metadata(
     staging: &Path,
     descriptor: &InstanceDescriptor,
     receipt: &InstallReceipt,
+    lockfile: &InstanceLockfile,
 ) -> Result<()> {
     descriptor.validate().map_err(|source| {
         install_error(
             ErrorCode::InstallValidationFailed,
             "instance descriptor is invalid",
+        )
+        .with_source(source)
+    })?;
+    lockfile.validate().map_err(|source| {
+        install_error(
+            ErrorCode::InstallValidationFailed,
+            "instance lockfile is invalid",
         )
         .with_source(source)
     })?;
@@ -29,6 +37,13 @@ pub(super) async fn write_instance_metadata(
         .with_source(source)
     })?;
     let receipt_json = receipt.to_pretty_json()?;
+    let lockfile_json = serde_json::to_vec_pretty(lockfile).map_err(|source| {
+        install_error(
+            ErrorCode::InstallValidationFailed,
+            "failed to serialize instance lockfile",
+        )
+        .with_source(source)
+    })?;
     let graphene = staging.join(".graphene");
 
     tokio::fs::create_dir_all(&graphene)
@@ -42,7 +57,8 @@ pub(super) async fn write_instance_metadata(
         })?;
 
     write_new_sync(staging.join("instance.json"), instance_json).await?;
-    write_new_sync(graphene.join("install.json"), receipt_json).await
+    write_new_sync(graphene.join("install.json"), receipt_json).await?;
+    write_new_sync(graphene.join("lock.json"), lockfile_json).await
 }
 
 async fn write_new_sync(path: PathBuf, bytes: Vec<u8>) -> Result<()> {

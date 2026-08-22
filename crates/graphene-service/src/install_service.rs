@@ -46,11 +46,8 @@ impl InstallService {
                     )
                     .with_source(source)
                 })?;
-                let target = context
-                    .storage
-                    .path()
-                    .join("instances")
-                    .join(request.instance.id.to_string());
+                let target = graphene_storage::InstancePaths::new(context.storage.path())
+                    .instance_root(request.instance.id);
                 match fs::symlink_metadata(&target) {
                     Ok(_) => {
                         return Err(GrapheneError::new(

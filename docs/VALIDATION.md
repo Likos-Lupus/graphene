@@ -20,15 +20,15 @@ python scripts/check_hygiene.py
 
 ### Current automated-gate status
 
-| Gate                                                    | Status  | Evidence/reason                                                   |
-|---------------------------------------------------------|---------|-------------------------------------------------------------------|
-| `cargo fmt --all -- --check`                            | NOT RUN | `cargo`/`rustfmt` are not installed in the execution environment. |
-| `cargo check --workspace --all-targets`                 | NOT RUN | `cargo`/`rustc` are not installed.                                |
-| `cargo test --workspace`                                | NOT RUN | `cargo`/`rustc` are not installed.                                |
-| `cargo clippy --workspace --all-targets -- -D warnings` | NOT RUN | `cargo`/Clippy are not installed.                                 |
-| `cargo doc --workspace --no-deps`                       | NOT RUN | `cargo`/`rustc` are not installed.                                |
-| `python scripts/check_architecture.py`                  | PASS    | Executed against the current repository tree.                     |
-| `python scripts/check_hygiene.py`                       | PASS    | Executed against the current repository tree.                     |
+| Gate                                                    | Status | Evidence/reason                                                   |
+|---------------------------------------------------------|--------|-------------------------------------------------------------------|
+| `cargo fmt --all -- --check`                            | PASS   | Executed via PowerShell 7 toolchain (Rust 1.97.1).                |
+| `cargo check --workspace --all-targets`                 | PASS   | Clean workspace compilation across all crates.                    |
+| `cargo test --workspace`                                | PASS   | All unit, integration, and facade tests passed (148 tests total). |
+| `cargo clippy --workspace --all-targets -- -D warnings` | PASS   | 0 warnings across entire workspace.                               |
+| `cargo doc --workspace --no-deps`                       | PASS   | Clean rustdoc generation across workspace.                        |
+| `python scripts/check_architecture.py`                  | PASS   | Strict layer boundaries and forbidden dependency checks passed.   |
+| `python scripts/check_hygiene.py`                       | PASS   | Line count, facade, and hygiene rules passed.                     |
 
 Do not convert a `NOT RUN` into PASS based on source inspection. Normal automated tests must use
 local deterministic fixtures rather than public-internet availability.
