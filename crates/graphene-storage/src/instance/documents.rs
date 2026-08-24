@@ -9,8 +9,8 @@ pub const MAX_DESCRIPTOR_BYTES: usize = 64 * 1024;
 /// Maximum byte limit for `install.json` (512 KiB).
 pub const MAX_RECEIPT_BYTES: usize = 512 * 1024;
 
-/// Maximum byte limit for `lock.json` (1 MiB).
-pub const MAX_LOCKFILE_BYTES: usize = 1024 * 1024;
+/// Maximum byte limit for `lock.json` (4 MiB).
+pub const MAX_LOCKFILE_BYTES: usize = 4 * 1024 * 1024;
 
 /// Maximum byte limit for `config.json` and `instance-defaults.json` (64 KiB).
 pub const MAX_CONFIG_BYTES: usize = 64 * 1024;

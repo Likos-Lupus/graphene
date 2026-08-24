@@ -18,6 +18,7 @@ PACKAGE_NAMES = [
     "graphene-instance",
     "graphene-java",
     "graphene-auth",
+    "graphene-content",
     "graphene-providers",
     "graphene-install",
     "graphene-launch",
@@ -50,7 +51,15 @@ EXPLICIT_FORBIDDEN = {
     ("graphene-install", "graphene-providers"),
     ("graphene-install", "graphene-network"),
     ("graphene-install", "graphene-service"),
+    ("graphene-install", "graphene-content"),
     ("graphene-providers", "graphene-service"),
+    ("graphene-content", "graphene-providers"),
+    ("graphene-content", "graphene-network"),
+    ("graphene-content", "graphene-service"),
+    ("graphene-launch", "graphene-content"),
+    ("graphene-minecraft", "graphene-content"),
+    ("graphene-auth", "graphene-content"),
+    ("graphene-java", "graphene-content"),
 }
 
 MAX_CRATE_ROOT_LINES = 120

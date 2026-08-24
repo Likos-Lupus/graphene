@@ -129,6 +129,29 @@ is atomic and reuse requires matching verified content/provenance rather than fi
 Cancellation before publication, output path escape, missing/extra undeclared outputs, and hash
 mismatch must not produce a reusable canonical object.
 
+## Content and mod security
+
+Content management enforces strict integrity, path safety, privacy, and secret boundaries:
+
+- **Untrusted provider metadata**: Response payloads, pagination limits, and string fields are
+  strictly bounded in memory. Metadata never executes scripts, native commands, or arbitrary Java.
+- **Download integrity**: Remote mod files require verified SHA-1 or SHA-256 cryptographic digests
+  before publication into instance desired state. MD5 and Murmur2 fingerprints are strictly lookup
+  metadata and never satisfy artifact integrity.
+- **Local JAR inspection**: Scanning `.minecraft/mods` is non-executing and non-extracting. Mod
+  descriptors (`fabric.mod.json`, `mods.toml`, `neoforge.mods.toml`, `mcmod.info`) are parsed with
+  bounded memory and entry limits using the centralized `graphene-core::archive` codec.
+- **Filename and path containment**: Remote filenames are treated as untrusted metadata and
+  sanitized against directory traversal (`..`), path separators (`/`, `\`), control characters, and
+  case-folding collisions on case-insensitive filesystems.
+- **Privacy and offline scanning**: `scan()` is strictly offline and never transmits hashes or
+  fingerprints over the network. File matching/recognition occurs only upon explicit host request.
+- **Secret redaction**: CurseForge API keys are wrapped in `SensitiveString`, redacted in `Debug`
+  and tracing output, and never persisted to the data root, lockfile, journal, or diagnostics.
+- **Transaction trust boundary**: The mutation journal (`.graphene/content-journal.json`) records
+  filesystem transition mechanics only; it contains no credentials, authorization headers, or raw
+  provider bodies.
+
 ## Persistence
 
 Schema-versioned receipts/descriptors are validated on read. Compatibility migrations preserve old

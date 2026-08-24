@@ -51,10 +51,21 @@ Phase 4 capability depends on ad hoc mutation or provider-specific persisted sta
 
 ## Phase 5 — Content
 
-Local mod scanning, normalized project/version/file/dependency models, provider adapters such as
-Modrinth/CurseForge, hash lookup, install/update, and compatibility/dependency checks.
+Provider-neutral content bounded context (`graphene-content`), offline mod scanning
+(`.minecraft/mods`), bounded metadata inspection (Fabric `fabric.mod.json`, Forge
+`META-INF/mods.toml`, NeoForge `META-INF/neoforge.mods.toml`, Legacy `mcmod.info`), streaming SHA-1
+and SHA-256 local identities, CurseForge-compatible Murmur2 lookup fingerprinting, Modrinth and
+optional CurseForge providers with strict secret redaction, deterministic bounded
+required-dependency resolution, inspectable non-mutating `ContentMutationPlan`, journaled
+crash-recoverable execution under exclusive instance leases, schema-2 `lock.json` desired-state
+evolution with schema-1 read compatibility, and convergence with existing instance verification and
+provider-neutral repair.
 
-**Exit:** provider-neutral service APIs and artifact/install pipeline reuse.
+**Exit:** hosts have provider-neutral local mod inventory, discovery, recognition, exact
+install/update and dependency/compatibility planning; all managed content mutations use one
+inspectable stale-protected transaction model and persist into the existing desired-state lockfile;
+verified artifact acquisition, instance verification, repair, clone/delete locking, cancellation,
+security, and provider isolation remain convergent rather than forming a second launcher pipeline.
 
 ## Phase 6 — Modpacks
 

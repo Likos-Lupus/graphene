@@ -3,11 +3,13 @@ use graphene_core::{ArtifactIntegrity, ArtifactKind, ArtifactSource, InstanceId,
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const LOCKFILE_SCHEMA_VERSION: u32 = 1;
+pub const LOCKFILE_SCHEMA_VERSION: u32 = 2;
 pub const MAX_LOCKED_COMPONENTS: usize = 64;
 pub const MAX_LOCKED_ARTIFACTS: usize = 4096;
 pub const MAX_LOCKED_OUTPUTS: usize = 256;
 pub const MAX_LOCKED_EXTRACTIONS: usize = 256;
+pub const MAX_LOCKED_CONTENT: usize = 1024;
+pub const MAX_LOCKED_DEPENDENCIES_PER_ENTRY: usize = 64;
 
 /// Materialization scope and replacement strategy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -51,6 +53,29 @@ pub struct LockedGeneratedOutput {
     pub input_sha256: BTreeMap<String, String>,
 }
 
+/// Durable snapshot of a dependency relationship for an installed content entry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LockedContentDependency {
+    pub target: String,
+    pub relation: String,
+}
+
+/// Durable record of a Graphene-managed content entry (e.g. mod) persisted in desired state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LockedContentEntry {
+    pub entry_id: String,
+    pub kind: String,
+    pub provider: Option<String>,
+    pub project_id: Option<String>,
+    pub version_id: Option<String>,
+    pub file_id: Option<String>,
+    pub artifact_logical_key: String,
+    pub destination: ManagedRelativePath,
+    pub enabled: bool,
+    #[serde(default)]
+    pub dependencies: Vec<LockedContentDependency>,
+}
+
 /// Durable, provider-neutral desired state lockfile persisted at `instances/<id>/.graphene/lock.json`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstanceLockfile {
@@ -61,4 +86,6 @@ pub struct InstanceLockfile {
     pub artifacts: Vec<LockedArtifact>,
     pub native_extractions: Vec<LockedNativeExtraction>,
     pub generated_outputs: Vec<LockedGeneratedOutput>,
+    #[serde(default)]
+    pub content: Vec<LockedContentEntry>,
 }

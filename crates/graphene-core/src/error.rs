@@ -117,6 +117,20 @@ pub enum ErrorCode {
     AuthSecretDeleteFailed,
     AuthPersistenceFailed,
     AuthCancelled,
+    ContentProviderUnavailable,
+    ContentProjectNotFound,
+    ContentVersionNotFound,
+    ContentFileUnavailable,
+    ContentFileUnverifiable,
+    ContentIncompatible,
+    ContentDependencyUnsatisfied,
+    ContentDependencyConflict,
+    ContentDependencyBoundExceeded,
+    ContentAmbiguousMatch,
+    ContentInventoryStale,
+    ContentPlanInvalid,
+    ContentMutationFailed,
+    ContentRecoveryFailed,
     InternalInvariantViolation,
 }
 
@@ -236,6 +250,20 @@ impl ErrorCode {
             Self::AuthSecretDeleteFailed => "AUTH_SECRET_DELETE_FAILED",
             Self::AuthPersistenceFailed => "AUTH_PERSISTENCE_FAILED",
             Self::AuthCancelled => "AUTH_CANCELLED",
+            Self::ContentProviderUnavailable => "CONTENT_PROVIDER_UNAVAILABLE",
+            Self::ContentProjectNotFound => "CONTENT_PROJECT_NOT_FOUND",
+            Self::ContentVersionNotFound => "CONTENT_VERSION_NOT_FOUND",
+            Self::ContentFileUnavailable => "CONTENT_FILE_UNAVAILABLE",
+            Self::ContentFileUnverifiable => "CONTENT_FILE_UNVERIFIABLE",
+            Self::ContentIncompatible => "CONTENT_INCOMPATIBLE",
+            Self::ContentDependencyUnsatisfied => "CONTENT_DEPENDENCY_UNSATISFIED",
+            Self::ContentDependencyConflict => "CONTENT_DEPENDENCY_CONFLICT",
+            Self::ContentDependencyBoundExceeded => "CONTENT_DEPENDENCY_BOUND_EXCEEDED",
+            Self::ContentAmbiguousMatch => "CONTENT_AMBIGUOUS_MATCH",
+            Self::ContentInventoryStale => "CONTENT_INVENTORY_STALE",
+            Self::ContentPlanInvalid => "CONTENT_PLAN_INVALID",
+            Self::ContentMutationFailed => "CONTENT_MUTATION_FAILED",
+            Self::ContentRecoveryFailed => "CONTENT_RECOVERY_FAILED",
             Self::InternalInvariantViolation => "INTERNAL_INVARIANT_VIOLATION",
         }
     }
@@ -265,6 +293,7 @@ pub enum ErrorKind {
     Java,
     Launch,
     Authentication,
+    Content,
     Internal,
 }
 
@@ -409,6 +438,14 @@ mod tests {
         assert_eq!(
             ErrorCode::OperationCancelled.as_str(),
             "OPERATION_CANCELLED"
+        );
+        assert_eq!(
+            ErrorCode::ContentProviderUnavailable.as_str(),
+            "CONTENT_PROVIDER_UNAVAILABLE"
+        );
+        assert_eq!(
+            ErrorCode::ContentIncompatible.as_str(),
+            "CONTENT_INCOMPATIBLE"
         );
     }
 

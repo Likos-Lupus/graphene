@@ -34,7 +34,7 @@ impl ForgeProviderConfig {
         Ok(config)
     }
 
-    pub(super) fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<()> {
         validate_endpoint(&self.promotions_url, self.allow_http)?;
         validate_endpoint(&self.maven_base, self.allow_http)
     }

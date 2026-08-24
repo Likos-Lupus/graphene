@@ -5,9 +5,11 @@ Slint, CLI, and other hosts are consumers of the engine rather than part of its 
 
 The current repository implements the launcher foundation, Vanilla metadata/install/launch path,
 provider-neutral accounts with Microsoft authentication support, managed Java support, component
-composition, and Fabric/Forge/NeoForge loader adapters. The implementation remains a candidate
-rather than release sign-off; current automated and real-world validation evidence is tracked in
-[`docs/VALIDATION.md`](docs/VALIDATION.md).
+composition, Fabric/Forge/NeoForge loader adapters, mutable instance engine with locking, verify,
+and repair, and provider-neutral content management (local offline mod scanning, Modrinth and
+CurseForge catalog integration, bounded dependency resolution, journaled transactions, and lockfile
+convergence). The implementation remains a candidate rather than release sign-off; current automated
+and real-world validation evidence is tracked in [`docs/VALIDATION.md`](docs/VALIDATION.md).
 
 ## Start here
 
