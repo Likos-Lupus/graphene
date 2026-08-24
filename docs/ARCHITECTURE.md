@@ -16,11 +16,11 @@ root graphene facade
     v
 graphene-service  (composition/adapters)
     |
-    +-------------------------------+
-    |               |               |
- install/launch   providers       storage
-    |               |               |
-    +-------- domain ports/models ---+
+    +-----------------------------------------------+
+    |               |               |               |
+ install/launch   providers      storage         content
+    |               |               |               |
+    +-------- domain ports/models --+---------------+
                     |
          minecraft / java / auth / instance
                     |
@@ -50,6 +50,10 @@ Durable rules:
 - `graphene-java` owns Java domain/ports without depending on provider/network/storage/service.
 - `graphene-auth` owns account/auth/secret-store contracts without depending on network/storage/
   service/launch infrastructure.
+- `graphene-content` owns provider-neutral content identities, local metadata normalization,
+  compatibility evaluation, dependency graph resolution, and non-mutating mutation planning without
+  depending on `graphene-providers`, `graphene-network`, or `graphene-service`.
+- `graphene-launch` remains unaware of content providers, mod metadata, or remote catalogs.
 - Providers may normalize into stable domain types but may not depend on service composition.
 - The internal workspace dependency graph must remain acyclic.
 
@@ -130,6 +134,31 @@ Instance management is unified in one cross-process architecture:
 - **Deterministic repair orchestration**: Repair is split into planning (deriving a non-mutating
   `RepairPlan` from desired state vs. filesystem observations) and execution (applying actions via
   existing install acquisition and materialization primitives under an exclusive lease).
+
+## Content management and desired-state convergence
+
+Content management (mods and remote catalogs) is fully converged on the existing instance engine and
+verified acquisition pipeline:
+
+- **Strict layer separation**: `graphene-content` defines provider-neutral models, metadata parsers
+  (Fabric, Forge, NeoForge, Legacy), and dependency resolution algorithms. `graphene-providers` owns
+  Modrinth/CurseForge DTOs, endpoint adapters, and secret redaction. `graphene-service` orchestrates
+  leases, verified pre-acquisition, staging, and journaled transactions.
+- **Single desired-state authority**: Managed mods are declared directly in `lock.json` schema 2
+  under `content` and `artifacts`. There is no separate `.graphene/content.json` or parallel
+  authority.
+- **Physical inventory vs. desired state vs. catalog identity**: Physical inventory
+  (`.minecraft/mods`)
+  is discovered offline; desired state reflects what Graphene manages; catalog identity is explicit
+  provenance. Unmanaged files remain untouched by normal verification and are never bulk-deleted.
+- **Journaled execution and crash recovery**: Content mutations execute under an exclusive lease
+  with stale-state protection (`InstanceStateFingerprint` + `ContentInventoryFingerprint`), staged
+  publication, old-file quarantine, and a durable journal (`.graphene/content-journal.json`). The
+  atomic lockfile write is the authoritative point-of-no-return commit marker. Interrupted
+  transactions recover idempotently to the committed desired state.
+- **Verification and repair convergence**: Managed mods are verified via existing quick and full
+  instance verification. Corrupted or missing managed mods are repaired through existing
+  provider-neutral Phase 4 repair primitives without requiring a live content provider connection.
 
 ## Storage and archive boundaries
 

@@ -25,7 +25,7 @@ layout, and composes one engine. Multiple engines may coexist with separate root
 install a process-global async runtime or tracing subscriber.
 
 The facade exposes services through `operations()`, `accounts()`, `artifacts()`, `minecraft()`,
-`loaders()`, `install()`, `java()`, `launch()`, and `instances()`.
+`loaders()`, `install()`, `java()`, `launch()`, `instances()`, and `content()`.
 
 ## Instance engine and lifecycle
 
@@ -101,6 +101,61 @@ infrastructure and are never deleted on unlock.
   install primitives under an exclusive lease. Stale plans whose base state fingerprint differs from
   current disk state are rejected with `ErrorCode::InstanceRepairPlanStale`. Successful repair
   converges to a no-op second plan.
+
+## Content management and mod workflow
+
+`graphene.content()` provides `ContentService` for offline local mod inspection, remote catalog
+discovery, explicit file recognition, deterministic mutation planning, and crash-recoverable
+execution.
+
+### Local offline scanning & metadata
+
+- `graphene.content().scan(instance_id, compute_hashes)`: returns `ContentScanOperation` scanning
+  `.minecraft/mods` strictly offline without network requests.
+    - Returns `LocalContentInventory` containing `LocalContentFile` items classified as
+      `ManagedHealthy`,
+      `ManagedDrifted`, `RecognizedUnmanaged`, `UnmanagedKnownMetadata`, `UnmanagedUnknown`,
+      `Disabled`, or `Invalid`.
+    - Parses `fabric.mod.json`, `META-INF/mods.toml`, `META-INF/neoforge.mods.toml`, and legacy
+      manifests in a bounded, non-executing manner.
+    - Distinguishes enabled (`.jar`) and disabled (`.jar.disabled`) files.
+    - Computes streaming SHA-1, SHA-256, and normalized Murmur2 hashes when requested.
+    - Surfaces duplicate enabled logical mod IDs across physical files via `duplicate_mod_ids`.
+    - Computes `ContentInventoryFingerprint` for optimistic concurrency and stale detection.
+
+### Remote catalog discovery & explicit recognition
+
+- `graphene.content().search(provider_id, query)`: returns `ContentSearchOperation` querying
+  projects on Modrinth or CurseForge with normalized pagination, loader, and game-version filtering.
+- `graphene.content().project(project_ref)`: returns `ContentProjectOperation` with detailed
+  metadata.
+- `graphene.content().versions(project_ref, filters)`: returns `ContentVersionsOperation` with
+  versions.
+- `graphene.content().version(version_ref)`: returns `ContentVersionOperation` with exact version
+  detail.
+- `graphene.content().recognize(instance_id)`: returns `ContentRecognitionOperation` explicitly
+  uploading local hashes/fingerprints to registered providers to recognize unmanaged local files.
+
+### Mutation planning & execution
+
+- `graphene.content().plan(request)`: returns `ContentPlanOperation` generating an inspectable,
+  deterministic, non-mutating `ContentMutationPlan`.
+    - Actions: `InstallExactVersion`, `AdoptRecognizedLocal`, `UpdateManaged`, `SetEnabled`,
+      `RemoveManaged` (with reverse required dependency protection), and `RemoveLocalExact`.
+    - Resolves required dependency closures deterministically, surfaces optional dependencies, and
+      rejects incompatibilities.
+    - Sanitizes filenames against traversal and case-fold collisions.
+    - Pins exact artifact sources, sizes, and digests.
+- `graphene.content().execute(plan)`: returns `ContentExecuteOperation` applying the plan under the
+  exclusive instance lease.
+    - Pre-acquires verified artifacts into the immutable cache before taking the lease.
+    - Revalidates `InstanceStateFingerprint` and `ContentInventoryFingerprint` against disk state.
+    - Stages files, records transaction state in `.graphene/content-journal.json`, quarantines old
+      files, publishes new files, performs enable/disable renames, and atomically commits
+      `lock.json` schema 2.
+    - Interrupted operations recover idempotently on subsequent lease acquisition.
+- `graphene.content().find_updates(instance_id, policy)` / `plan_updates(instance_id, policy)`:
+  discovers and plans updates for all managed mods, converging to a no-op when unchanged.
 
 ## Operations, errors, and diagnostics
 

@@ -345,6 +345,7 @@ async fn verification_quick_and_full_reports() {
         }],
         native_extractions: Vec::new(),
         generated_outputs: Vec::new(),
+        content: Vec::new(),
     };
 
     write_json_atomic(&repo.paths().instance_descriptor_path(id), &desc).unwrap();
@@ -439,6 +440,7 @@ async fn repair_workflow_planning_execution_and_convergence() {
         }],
         native_extractions: Vec::new(),
         generated_outputs: Vec::new(),
+        content: Vec::new(),
     };
 
     write_json_atomic(&repo.paths().instance_descriptor_path(id), &desc).unwrap();

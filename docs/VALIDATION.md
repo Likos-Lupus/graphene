@@ -22,9 +22,9 @@ python scripts/check_hygiene.py
 
 | Gate                                                    | Status | Evidence/reason                                                   |
 |---------------------------------------------------------|--------|-------------------------------------------------------------------|
-| `cargo fmt --all -- --check`                            | PASS   | Executed via PowerShell 7 toolchain (Rust 1.97.1).                |
+| `cargo fmt --all -- --check`                            | PASS   | Clean formatting across all crates, tests, and facade.            |
 | `cargo check --workspace --all-targets`                 | PASS   | Clean workspace compilation across all crates.                    |
-| `cargo test --workspace`                                | PASS   | All unit, integration, and facade tests passed (148 tests total). |
+| `cargo test --workspace`                                | PASS   | All unit, integration, and facade tests passed (202 tests total). |
 | `cargo clippy --workspace --all-targets -- -D warnings` | PASS   | 0 warnings across entire workspace.                               |
 | `cargo doc --workspace --no-deps`                       | PASS   | Clean rustdoc generation across workspace.                        |
 | `python scripts/check_architecture.py`                  | PASS   | Strict layer boundaries and forbidden dependency checks passed.   |
@@ -144,6 +144,37 @@ Legacy Forge metadata-only classification is not a modern-install smoke claim.
    data, launch, and record bounded NeoForge initialization evidence.
 6. Verify shared output reuse on a second install and corruption rejection/regeneration in a
    disposable isolated root.
+
+## Modrinth content real smoke
+
+**Status: NOT RUN.** Prerequisites: external public internet connection to `api.modrinth.com` and
+live Minecraft game launch environment.
+
+Procedure:
+
+1. Create a supported Fabric instance (Minecraft `1.21.1`, Fabric Loader `0.16.14`).
+2. Search Modrinth content via `graphene.content().search(modrinth, query)`.
+3. Resolve an exact compatible mod version (e.g. Sodium `0.5.8`) and verify required dependencies.
+4. Generate a `ContentMutationPlan` and verify non-mutating preview.
+5. Execute the plan via `graphene.content().execute(plan)`.
+6. Run `graphene.instances().verify(id, VerificationMode::Full)` and confirm healthy state.
+7. Launch Minecraft and record bounded mod initialization log evidence.
+8. Disable the network and verify local offline inventory scan and lockfile desired state remain
+   intact.
+9. Match local mod bytes via `graphene.content().recognize(id)` and confirm exact match.
+
+## CurseForge content real smoke
+
+**Status: NOT RUN.** Prerequisites: distributor-supplied CurseForge API key and live public network
+connection to `api.curseforge.com`.
+
+Procedure:
+
+1. Configure a valid `CurseForgeProviderConfig` with `api_key` in `GrapheneBuilder`.
+2. Search and resolve a compatible CurseForge mod file containing verified SHA-1 integrity.
+3. Plan and execute installation through the journaled content mutation pipeline.
+4. Run full instance verification and launch game.
+5. Verify API key is redacted in all diagnostic, error, log, and persistent storage outputs.
 
 ## Recording rule
 

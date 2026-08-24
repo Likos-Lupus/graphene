@@ -10,6 +10,7 @@ mod adapters;
 mod artifact_service;
 mod builder;
 mod component_install;
+mod content_service;
 mod context;
 mod install_service;
 mod install_tool_runner;
@@ -26,6 +27,12 @@ pub use artifact_service::{
     ArtifactOperation, ArtifactService, DownloadDisposition, VerifiedArtifact,
 };
 pub use builder::{Graphene, GrapheneBuilder, PlatformInfo};
+pub use content_service::{
+    AvailableContentUpdate, ContentExecuteOperation, ContentFaultPoint, ContentMutationJournal,
+    ContentMutationResult, ContentPlanOperation, ContentProjectOperation,
+    ContentRecognitionOperation, ContentScanOperation, ContentSearchOperation, ContentService,
+    ContentUpdatesOperation, ContentVersionOperation, ContentVersionsOperation,
+};
 pub use install_service::{InstallExecutionOperation, InstallPlanOperation, InstallService};
 pub use instance_service::{
     InstanceCloneOperation, InstanceDeleteOperation, InstanceRepairOperation, InstanceRepository,
@@ -40,6 +47,7 @@ pub use operation_service::{OperationService, SyntheticOperation};
 pub use graphene_network::{NetworkConfig, ProxyPolicy, RedirectPolicy, RetryPolicy};
 pub use graphene_platform::{Architecture, OperatingSystem};
 pub use graphene_providers::{
-    AdoptiumProviderConfig, FabricProviderConfig, ForgeProviderConfig, MicrosoftAuthConfig,
-    MicrosoftServiceEndpoints, MojangProviderConfig, NeoForgeProviderConfig,
+    AdoptiumProviderConfig, CurseForgeProviderConfig, FabricProviderConfig, ForgeProviderConfig,
+    MicrosoftAuthConfig, MicrosoftServiceEndpoints, ModrinthProviderConfig, MojangProviderConfig,
+    NeoForgeProviderConfig,
 };

@@ -326,6 +326,45 @@ impl NetworkClient {
         .await
     }
 
+    /// Performs a bounded GET request with custom headers without exposing Reqwest types.
+    pub async fn get_with_headers_bounded(
+        &self,
+        raw_url: &str,
+        headers: &[(&str, &str)],
+        max_bytes: usize,
+        allow_http: bool,
+        operation: &OperationController,
+    ) -> Result<BoundedResponse> {
+        let mut req = self.protocol_client.get(raw_url);
+        for (k, v) in headers {
+            req = req.header(*k, *v);
+        }
+        self.send_bounded(raw_url, req, max_bytes, allow_http, operation)
+            .await
+    }
+
+    /// Performs a bounded JSON POST request with custom headers without exposing Reqwest types.
+    pub async fn post_json_with_headers_bounded(
+        &self,
+        raw_url: &str,
+        body: &[u8],
+        headers: &[(&str, &str)],
+        max_bytes: usize,
+        allow_http: bool,
+        operation: &OperationController,
+    ) -> Result<BoundedResponse> {
+        let mut req = self
+            .protocol_client
+            .post(raw_url)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body.to_vec());
+        for (k, v) in headers {
+            req = req.header(*k, *v);
+        }
+        self.send_bounded(raw_url, req, max_bytes, allow_http, operation)
+            .await
+    }
+
     /// Performs a bounded status-preserving GET for provider metadata.
     pub async fn get_response_bounded(
         &self,

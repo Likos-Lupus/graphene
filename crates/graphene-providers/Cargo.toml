@@ -11,6 +11,7 @@ graphene-auth.workspace = true
 graphene-java.workspace = true
 graphene-network.workspace = true
 graphene-minecraft.workspace = true
+graphene-content.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

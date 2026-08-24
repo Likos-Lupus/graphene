@@ -68,6 +68,7 @@ fn lockfile_validation_and_fingerprint_stability() {
         }],
         native_extractions: Vec::new(),
         generated_outputs: Vec::new(),
+        content: Vec::new(),
     };
 
     lockfile.validate().expect("valid lockfile");
@@ -75,6 +76,46 @@ fn lockfile_validation_and_fingerprint_stability() {
     let fp1 = InstanceStateFingerprint::compute(id, &receipt, Some(&lockfile), None);
     let fp2 = InstanceStateFingerprint::compute(id, &receipt, Some(&lockfile), None);
     assert_eq!(fp1, fp2);
+
+    // Adding content changes the fingerprint
+    let mut lockfile2 = lockfile.clone();
+    lockfile2.content.push(LockedContentEntry {
+        entry_id: "entry-1".to_string(),
+        kind: "MOD".to_string(),
+        provider: Some("modrinth".to_string()),
+        project_id: Some("sodium".to_string()),
+        version_id: Some("0.5.8".to_string()),
+        file_id: Some("file-1".to_string()),
+        artifact_logical_key: "mod:sodium".to_string(),
+        destination: crate::ManagedRelativePath::new(".minecraft/mods/sodium.jar").unwrap(),
+        enabled: true,
+        dependencies: Vec::new(),
+    });
+    lockfile2.validate().expect("valid schema 2 lockfile");
+
+    let fp_content = InstanceStateFingerprint::compute(id, &receipt, Some(&lockfile2), None);
+    assert_ne!(fp1, fp_content);
+
+    // Schema 1 deserialization compatibility without content field
+    let schema1_json = r#"{
+        "schema_version": 1,
+        "instance_id": "00000000-0000-0000-0000-000000000001",
+        "minecraft_version": "1.21.1",
+        "components": [{
+            "uid": "net.minecraft",
+            "version": "1.21.1",
+            "kind": "Minecraft",
+            "provider": "mojang"
+        }],
+        "artifacts": [],
+        "native_extractions": [],
+        "generated_outputs": []
+    }"#;
+    let schema1_lock: InstanceLockfile =
+        serde_json::from_str(schema1_json).expect("deserializes schema 1");
+    assert_eq!(schema1_lock.schema_version, 1);
+    assert!(schema1_lock.content.is_empty());
+    schema1_lock.validate().expect("valid schema 1 lockfile");
 
     // Renaming display name does not change executable state fingerprint
     let _desc1 = InstanceDescriptor::create(&NewInstanceSpec::with_id(id, "Name 1").unwrap());

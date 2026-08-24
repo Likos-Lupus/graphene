@@ -31,7 +31,12 @@ The engine owns these product responsibilities:
 - Fabric, Forge, and NeoForge provider adapters that normalize into shared domain/install models;
 - mutable instance engine with persistent advisory file locks, inventory discovery, configuration
   hierarchy, lifecycle transactions (rename, clone, quarantine delete), structural/full
-  verification, and deterministic repair.
+  verification, and deterministic repair;
+- provider-neutral content management: offline mod inventory scanning, metadata normalization
+  (Fabric, Forge, NeoForge, legacy), streaming identity hashing, Murmur2 fingerprinting, Modrinth
+  and CurseForge adapters, deterministic bounded required-dependency resolution, inspectable
+  mutation planning, journaled crash-recoverable execution under exclusive leases, lockfile
+  desired-state persistence, and verification/repair convergence.
 
 The current public behavior is described in [`API.md`](API.md). Evidence-based loader limitations
 are in [`LOADER_SUPPORT.md`](LOADER_SUPPORT.md).
@@ -94,7 +99,15 @@ ports and never calls providers or the network transport directly.
 
 ### Instance
 
-Stable instance identity and schema-versioned provider-neutral persisted launch/install state.
+Stable instance identity and schema-versioned provider-neutral persisted launch/install/content
+state.
+
+### Content
+
+Provider-neutral content identities, local mod metadata inspection, offline inventory models,
+streaming identities, Murmur2 lookup fingerprinting, compatibility evaluation, bounded dependency
+graph resolution, and non-mutating mutation planning. Content does not depend on provider DTOs,
+network implementations, or service composition.
 
 ### Java
 

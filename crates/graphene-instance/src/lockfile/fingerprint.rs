@@ -76,6 +76,29 @@ impl InstanceStateFingerprint {
                 hasher.update(generated.sha256.as_bytes());
                 hasher.update(generated.size.to_be_bytes());
             }
+            for entry in &lock.content {
+                hasher.update(entry.entry_id.as_bytes());
+                hasher.update(entry.kind.as_bytes());
+                if let Some(p) = &entry.provider {
+                    hasher.update(p.as_bytes());
+                }
+                if let Some(pid) = &entry.project_id {
+                    hasher.update(pid.as_bytes());
+                }
+                if let Some(vid) = &entry.version_id {
+                    hasher.update(vid.as_bytes());
+                }
+                if let Some(fid) = &entry.file_id {
+                    hasher.update(fid.as_bytes());
+                }
+                hasher.update(entry.artifact_logical_key.as_bytes());
+                hasher.update(entry.destination.as_str().as_bytes());
+                hasher.update(if entry.enabled { [1u8] } else { [0u8] });
+                for dep in &entry.dependencies {
+                    hasher.update(dep.target.as_bytes());
+                    hasher.update(dep.relation.as_bytes());
+                }
+            }
         }
 
         // 4. Launch-affecting configuration (when present)

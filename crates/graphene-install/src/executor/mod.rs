@@ -490,5 +490,6 @@ fn assemble_lockfile(data_root: &Path, plan: &InstallPlan) -> Result<InstanceLoc
         artifacts,
         native_extractions,
         generated_outputs,
+        content: Vec::new(),
     })
 }

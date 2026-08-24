@@ -31,8 +31,9 @@ pub use descriptor::{INSTANCE_SCHEMA_VERSION, InstanceDescriptor};
 pub use inventory::{InstanceInventoryEntry, InstanceStatus};
 pub use lockfile::{
     InstanceLockfile, InstanceStateFingerprint, LOCKFILE_SCHEMA_VERSION, LockedArtifact,
-    LockedGeneratedOutput, LockedMaterializationScope, LockedNativeExtraction,
-    MAX_LOCKED_ARTIFACTS, MAX_LOCKED_COMPONENTS, MAX_LOCKED_EXTRACTIONS, MAX_LOCKED_OUTPUTS,
+    LockedContentDependency, LockedContentEntry, LockedGeneratedOutput, LockedMaterializationScope,
+    LockedNativeExtraction, MAX_LOCKED_ARTIFACTS, MAX_LOCKED_COMPONENTS, MAX_LOCKED_CONTENT,
+    MAX_LOCKED_DEPENDENCIES_PER_ENTRY, MAX_LOCKED_EXTRACTIONS, MAX_LOCKED_OUTPUTS,
 };
 pub use path::{MAX_MANAGED_PATH_BYTES, ManagedRelativePath};
 pub use receipt::{

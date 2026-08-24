@@ -1,16 +1,18 @@
 use crate::{
     AccountService, ArtifactService, InstallService, JavaService, LaunchService, LoaderService,
     MinecraftService, OperationService, account_service::StorageAccountRepository,
-    context::ServiceContext,
+    content_service::ContentService, context::ServiceContext,
 };
 use graphene_auth::{SecretStore, UnavailableSecretStore};
 use graphene_core::{ErrorCode, ErrorKind, GrapheneError, OperationRegistry, Result};
 use graphene_network::{NetworkClient, NetworkConfig};
 use graphene_platform::{Architecture, OperatingSystem, Platform};
 use graphene_providers::{
-    AdoptiumProvider, AdoptiumProviderConfig, FabricProvider, FabricProviderConfig, ForgeProvider,
+    AdoptiumProvider, AdoptiumProviderConfig, ContentProviderRegistry, CurseForgeContentProvider,
+    CurseForgeProviderConfig, FabricProvider, FabricProviderConfig, ForgeProvider,
     ForgeProviderConfig, LoaderProviderRegistry, MicrosoftAuthConfig, MicrosoftAuthProvider,
-    MojangProviderConfig, NeoForgeProvider, NeoForgeProviderConfig,
+    ModrinthContentProvider, ModrinthProviderConfig, MojangProviderConfig, NeoForgeProvider,
+    NeoForgeProviderConfig,
 };
 use graphene_storage::DataRoot;
 use std::{
@@ -116,6 +118,12 @@ impl Graphene {
     pub fn instances(&self) -> crate::instance_service::InstanceService {
         crate::instance_service::InstanceService::new(Arc::clone(&self.context))
     }
+
+    /// Returns the content discovery, inventory, planning, and mutation service.
+    #[must_use]
+    pub fn content(&self) -> ContentService {
+        ContentService::new(Arc::clone(&self.context))
+    }
 }
 
 /// Validating constructor for a fully initialized Graphene engine.
@@ -131,6 +139,8 @@ pub struct GrapheneBuilder {
     fabric_provider_config: FabricProviderConfig,
     forge_provider_config: ForgeProviderConfig,
     neoforge_provider_config: NeoForgeProviderConfig,
+    modrinth_provider_config: ModrinthProviderConfig,
+    curseforge_provider_config: Option<CurseForgeProviderConfig>,
 }
 
 impl std::fmt::Debug for GrapheneBuilder {
@@ -146,6 +156,11 @@ impl std::fmt::Debug for GrapheneBuilder {
             .field("fabric_provider_config", &self.fabric_provider_config)
             .field("forge_provider_config", &self.forge_provider_config)
             .field("neoforge_provider_config", &self.neoforge_provider_config)
+            .field("modrinth_provider_config", &self.modrinth_provider_config)
+            .field(
+                "curseforge_provider_config",
+                &self.curseforge_provider_config,
+            )
             .finish()
     }
 }
@@ -165,6 +180,8 @@ impl GrapheneBuilder {
             fabric_provider_config: FabricProviderConfig::default(),
             forge_provider_config: ForgeProviderConfig::default(),
             neoforge_provider_config: NeoForgeProviderConfig::default(),
+            modrinth_provider_config: ModrinthProviderConfig::default(),
+            curseforge_provider_config: None,
         }
     }
 
@@ -201,6 +218,20 @@ impl GrapheneBuilder {
     #[must_use]
     pub fn neoforge_provider(mut self, config: NeoForgeProviderConfig) -> Self {
         self.neoforge_provider_config = config;
+        self
+    }
+
+    /// Replaces the Modrinth content provider configuration.
+    #[must_use]
+    pub fn modrinth_provider(mut self, config: ModrinthProviderConfig) -> Self {
+        self.modrinth_provider_config = config;
+        self
+    }
+
+    /// Configures the optional CurseForge content provider.
+    #[must_use]
+    pub fn curseforge_provider(mut self, config: CurseForgeProviderConfig) -> Self {
+        self.curseforge_provider_config = Some(config);
         self
     }
 
@@ -254,6 +285,14 @@ impl GrapheneBuilder {
         }
         self.java_provider_config.validate()?;
 
+        self.fabric_provider_config.validate()?;
+        self.forge_provider_config.validate()?;
+        self.neoforge_provider_config.validate()?;
+        self.modrinth_provider_config.validate()?;
+        if let Some(config) = &self.curseforge_provider_config {
+            config.validate()?;
+        }
+
         let platform = Platform::current();
         let storage = DataRoot::initialize(&self.data_root)?;
         let network = NetworkClient::new(self.network)?;
@@ -286,6 +325,19 @@ impl GrapheneBuilder {
             self.neoforge_provider_config,
         )?))?;
 
+        let mut content_registry = ContentProviderRegistry::new();
+        content_registry.register(Arc::new(ModrinthContentProvider::new(
+            network.clone(),
+            self.modrinth_provider_config,
+        )?))?;
+
+        if let Some(cf_config) = self.curseforge_provider_config {
+            content_registry.register(Arc::new(CurseForgeContentProvider::new(
+                network.clone(),
+                cf_config,
+            )?))?;
+        }
+
         debug!(
             module = "graphene-service",
             data_root = %storage.path().display(),
@@ -300,6 +352,7 @@ impl GrapheneBuilder {
             operations,
             provider_config: self.provider_config,
             loader_registry,
+            content_registry,
             account_repository,
             secret_store: self.secret_store,
             auth_provider,
