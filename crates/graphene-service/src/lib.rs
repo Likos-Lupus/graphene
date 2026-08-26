@@ -19,6 +19,7 @@ mod java_service;
 mod launch_service;
 mod loader_service;
 mod minecraft_service;
+mod modpack_service;
 mod operation_lifecycle;
 mod operation_service;
 
@@ -42,6 +43,12 @@ pub use java_service::{JavaService, ManagedJavaOperation};
 pub use launch_service::LaunchService;
 pub use loader_service::{LoaderResolveOperation, LoaderService, LoaderVersionsOperation};
 pub use minecraft_service::{MinecraftManifestOperation, MinecraftService};
+pub use modpack_service::{
+    ExportEmbeddingPolicy, ModpackExecutionOperation, ModpackExportExecutionOperation,
+    ModpackExportPlan, ModpackExportPlanOperation, ModpackExportRequest, ModpackExportResult,
+    ModpackImportPlan, ModpackImportRequest, ModpackInspectionOperation, ModpackPlanOperation,
+    ModpackService, PackSource,
+};
 pub use operation_service::{OperationService, SyntheticOperation};
 
 pub use graphene_network::{NetworkConfig, ProxyPolicy, RedirectPolicy, RetryPolicy};

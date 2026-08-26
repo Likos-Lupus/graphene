@@ -123,6 +123,7 @@ macro_rules! digest_type {
 
 digest_type!(Sha1Digest, 20);
 digest_type!(Sha256Digest, 32);
+digest_type!(Sha512Digest, 64);
 
 #[cfg(test)]
 mod tests {
@@ -148,6 +149,25 @@ mod tests {
         assert!(matches!(
             "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
                 .parse::<Sha256Digest>(),
+            Err(HashParseError::InvalidHex)
+        ));
+    }
+
+    #[test]
+    fn sha512_round_trips_and_rejects_bad_input() {
+        let hex = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a\
+                   2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
+        assert_eq!(hex.len(), 128);
+        let digest: Sha512Digest = hex.parse().expect("valid sha512");
+        assert_eq!(digest.to_string(), hex);
+        assert!(matches!(
+            "abcd".parse::<Sha512Digest>(),
+            Err(HashParseError::InvalidLength { .. })
+        ));
+        assert!(matches!(
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\
+             zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+                .parse::<Sha512Digest>(),
             Err(HashParseError::InvalidHex)
         ));
     }

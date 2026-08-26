@@ -5,11 +5,15 @@
 //! classification.
 
 mod deflate;
+mod file_reader;
+mod writer;
 mod zip;
 
 use std::{error::Error, fmt};
 
-pub use deflate::inflate_raw_bounded;
+pub use deflate::{RawDeflateReader, inflate_raw_bounded};
+pub use file_reader::ArchiveFile;
+pub use writer::{DeterministicZipWriter, ZipWriterEntry};
 pub use zip::{ZipEntry, central_entries, crc32, extract_entry};
 
 /// Error category produced by the low-level archive codec.
@@ -18,6 +22,7 @@ pub use zip::{ZipEntry, central_entries, crc32, extract_entry};
 pub enum ArchiveCodecErrorKind {
     Invalid,
     Cancelled,
+    Io,
 }
 
 /// Filesystem-neutral error from bounded archive byte parsing/decompression.
@@ -41,6 +46,14 @@ impl ArchiveCodecError {
         Self {
             kind: ArchiveCodecErrorKind::Cancelled,
             message: "archive operation was cancelled",
+        }
+    }
+
+    #[must_use]
+    pub const fn io(message: &'static str) -> Self {
+        Self {
+            kind: ArchiveCodecErrorKind::Io,
+            message,
         }
     }
 

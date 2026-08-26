@@ -298,3 +298,54 @@ The public contract is Graphene-owned types and capability services. Provider pr
 file layouts, helper sequencing, transport/process handles, and internal DTOs are not compatibility
 promises. Persisted schema changes require explicit migration/compatibility handling and regression
 coverage.
+
+## Modpacks
+
+Modpack support is exposed through `Graphene::modpacks()` (`ModpackService`) and operates on
+normalized, provider-neutral pack models. Format differences terminate at import; committed
+instances are ordinary Graphene desired state.
+
+### Operations
+
+| Operation        | Input                                                        | Output                | Notes                                                                                               |
+|------------------|--------------------------------------------------------------|-----------------------|-----------------------------------------------------------------------------------------------------|
+| `inspect`        | `PackSource::{LocalFile, HttpsUrl}`                          | `PackInspection`      | Pins the source into the content-addressed cache first; all later steps read only pinned bytes.     |
+| `plan_import`    | `ModpackImportRequest { snapshot, target, optional_policy }` | `ModpackImportPlan`   | Deterministic composite plan (install plan + origin + fingerprint); performs no committed mutation. |
+| `execute_import` | `ModpackImportPlan`                                          | `CommittedInstance`   | One staged transaction: base runtime, managed files, seed layers, metadata commit.                  |
+| `plan_export`    | `ModpackExportRequest`                                       | `ModpackExportPlan`   | Reads lockfile desired state, hashes seed selection, computes a staleness fingerprint.              |
+| `execute_export` | `ModpackExportPlan`                                          | `ModpackExportResult` | Snapshot with stale checks, deterministic archive, self-validation, create-only publication.        |
+
+Every operation is an operation object exposing `operation()` (handle for progress/cancellation)
+and `await_result()`.
+
+### Key types
+
+- `PackSource` — local file or HTTPS URL import source; both become observed SHA-256/SHA-512
+  snapshots in the managed cache before any parsing.
+- `OptionalSelectionPolicy` (`RequiredOnly`, `IncludeAllOptional`, `Explicit`) — host-visible
+  optional-file choice and part of plan identity.
+- `ExportEmbeddingPolicy` (`ReferenceOnly`, `EmbedExplicit`) — explicit redistribution policy;
+  embedding requires the host to name each destination.
+- `ModpackExportRequest::with_seed` — selects user-mutable files relative to `.minecraft/` as seed
+  payload; reserved launcher state is rejected.
+- Diagnostics are typed pairs (e.g. `EXPORT_EMBEDDING_DECISION_REQUIRED`) on export plans; failures
+  are structured `GrapheneError`s with stable codes such as `PACK_PLAN_STALE`,
+  `PACK_EXPORT_STALE`, `PACK_SOURCE_TOO_LARGE`, `INSTALL_TARGET_EXISTS`.
+
+### Supported formats
+
+- Modrinth `.mrpack` v1 (mandatory SHA-1+SHA-512, override layering, URL host policy).
+- CurseForge manifest (exact `(project_id, file_id)` resolution through the content provider
+  boundary; embedded override mods promoted to managed content).
+- Prism/MultiMC instances (standard components; foreign launch semantics fail explicitly).
+- Graphene pack v1 (strict manifest, embedded objects at hash-derived paths, explicit seeds).
+- Generic archives require an explicit runtime/root decision; malformed known formats cannot be
+  bypassed by generic mode.
+
+### Lockfile schema 3
+
+`InstanceLockfile` schema version 3 adds optional bounded `pack_origin`
+(format/name/version/source SHA-256/external ids). Schemas 1 and 2 remain readable without eager
+rewrite; content mutations preserve the origin. Pack-managed artifacts are ordinary
+`LockedArtifact` entries and mods are ordinary `LockedContentEntry` entries, so verify/repair need
+no format branches.

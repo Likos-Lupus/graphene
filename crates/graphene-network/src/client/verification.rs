@@ -1,10 +1,10 @@
 use super::{NetworkClient, VerifiedFile, cancelled_error};
 use graphene_core::{
     Artifact, ArtifactIntegrity, CancellationToken, ErrorCode, ErrorKind, GrapheneError, Result,
-    Sha1Digest, Sha256Digest,
+    Sha1Digest, Sha256Digest, Sha512Digest,
 };
 use sha1::Sha1;
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, Sha512};
 use std::{fs::File as StdFile, io::Read, path::Path};
 
 impl NetworkClient {
@@ -53,6 +53,7 @@ fn verify_file_sync(
 
     let mut sha1 = Sha1::new();
     let mut sha256 = Sha256::new();
+    let mut sha512 = Sha512::new();
     let mut bytes = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
 
@@ -76,21 +77,26 @@ fn verify_file_sync(
 
         sha1.update(&buffer[..read]);
         sha256.update(&buffer[..read]);
+        sha512.update(&buffer[..read]);
         bytes = bytes.saturating_add(read as u64);
     }
 
     let sha1 = sha1.finalize();
     let sha256 = sha256.finalize();
+    let sha512 = sha512.finalize();
     let mut sha1_bytes = [0_u8; 20];
     let mut sha256_bytes = [0_u8; 32];
+    let mut sha512_bytes = [0_u8; 64];
 
     sha1_bytes.copy_from_slice(&sha1);
     sha256_bytes.copy_from_slice(&sha256);
+    sha512_bytes.copy_from_slice(&sha512);
 
     let verified = VerifiedFile {
         bytes,
         sha1: Sha1Digest::from_bytes(sha1_bytes),
         sha256: Sha256Digest::from_bytes(sha256_bytes),
+        sha512: Sha512Digest::from_bytes(sha512_bytes),
     };
     match expected_size {
         Some(expected) if verified.bytes != expected => {
@@ -125,6 +131,18 @@ fn verify_file_sync(
                 "cached artifact SHA-256 does not match expectation",
             )
             .with_context("algorithm", "sha256"));
+        }
+        _ => {}
+    }
+
+    match integrity.sha512() {
+        Some(expected) if verified.sha512 != expected => {
+            return Err(GrapheneError::new(
+                ErrorCode::HashMismatch,
+                ErrorKind::Integrity,
+                "cached artifact SHA-512 does not match expectation",
+            )
+            .with_context("algorithm", "sha512"));
         }
         _ => {}
     }

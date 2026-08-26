@@ -27,6 +27,7 @@ pub struct VerifiedArtifact {
     pub bytes: u64,
     pub sha1: graphene_core::Sha1Digest,
     pub sha256: graphene_core::Sha256Digest,
+    pub sha512: graphene_core::Sha512Digest,
     pub disposition: DownloadDisposition,
 }
 
@@ -151,14 +152,8 @@ impl ArtifactService {
         artifact: &Artifact,
         controller: &OperationController,
     ) -> graphene_core::Result<VerifiedArtifact> {
-        if artifact.sources.is_empty() {
-            return Err(GrapheneError::new(
-                ErrorCode::ConfigInvalid,
-                ErrorKind::Configuration,
-                "artifact requires at least one source",
-            ));
-        }
-
+        // Cache identity is derived from declared integrity before any source handling, so a
+        // verifiable cache-only artifact (sources = []) can be served entirely from cache.
         let cache = self.context.storage.cache_address(&artifact.integrity)?;
         let cache_path = cache.path().to_path_buf();
 
@@ -186,6 +181,14 @@ impl ArtifactService {
                 cache_path,
                 hit,
                 DownloadDisposition::CacheHit,
+            ));
+        }
+
+        if artifact.sources.is_empty() {
+            return Err(GrapheneError::new(
+                ErrorCode::ArtifactSourceUnavailable,
+                ErrorKind::Integrity,
+                "artifact has no valid cached object and no acquisition sources",
             ));
         }
 
@@ -370,6 +373,7 @@ fn from_verified_file(
         bytes: verified.bytes,
         sha1: verified.sha1,
         sha256: verified.sha256,
+        sha512: verified.sha512,
         disposition,
     }
 }
@@ -386,6 +390,7 @@ fn from_transfer(
         bytes: transfer.bytes,
         sha1: transfer.sha1,
         sha256: transfer.sha256,
+        sha512: transfer.sha512,
         disposition,
     }
 }

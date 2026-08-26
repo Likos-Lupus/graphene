@@ -1,0 +1,18 @@
+[package]
+name = "graphene-modpack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+graphene-core.workspace = true
+graphene-minecraft.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+sha2.workspace = true

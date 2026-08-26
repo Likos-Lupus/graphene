@@ -201,3 +201,22 @@ requirement for every distributor.
 
 It must not fail because a legitimate refactor removes a dependency, module, or file. Repository
 hygiene conventions are checked separately by `scripts/check_hygiene.py`.
+
+## Modpack bounded context
+
+`graphene-modpack` is the single normalized modpack context: source/metadata/runtime/file/seed
+models, deterministic format detection, per-format adapters (Modrinth, CurseForge, MultiMC, Graphene
+pack v1, generic), and strict archive indexing live there. Format DTOs are private to the crate,
+mirroring the provider-DTO rule. The crate depends only on `graphene-core`; it never depends on
+services, networking, storage, platform, or providers.
+
+Inverted acquisition is preserved for packs: `graphene-install` defines a generic seed-layer
+extension (`SeedArchiveLayer`) with no modpack-format knowledge; `graphene-service` adapts
+normalized packs onto it. The service layer owns all provider interaction — CurseForge entries in a
+normalized pack are exact `ContentVersionRef` references resolved through the existing
+`ContentProvider` boundary, never a parallel download path.
+
+Import/export share one pipeline: detection → normalization → composite plan (fingerprinted,
+validated, mutation-free) → staged transaction with a single create-only publication. Export reads
+committed desired state (lockfile + cache), snapshots verified bytes with staleness checks, and
+validates its own archive against the import contract before publishing deterministically.

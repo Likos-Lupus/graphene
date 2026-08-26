@@ -1,4 +1,4 @@
-use crate::{ArtifactId, Sha1Digest, Sha256Digest};
+use crate::{ArtifactId, Sha1Digest, Sha256Digest, Sha512Digest};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -91,6 +91,8 @@ impl fmt::Debug for ArtifactSource {
 pub struct ArtifactIntegrity {
     sha1: Option<Sha1Digest>,
     sha256: Option<Sha256Digest>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sha512: Option<Sha512Digest>,
 }
 
 impl ArtifactIntegrity {
@@ -100,6 +102,7 @@ impl ArtifactIntegrity {
         Self {
             sha1: None,
             sha256: None,
+            sha512: None,
         }
     }
 
@@ -117,6 +120,13 @@ impl ArtifactIntegrity {
         self
     }
 
+    /// Sets an expected SHA-512 digest.
+    #[must_use]
+    pub const fn with_sha512(mut self, digest: Sha512Digest) -> Self {
+        self.sha512 = Some(digest);
+        self
+    }
+
     /// Returns the expected SHA-1 digest.
     #[must_use]
     pub const fn sha1(&self) -> Option<Sha1Digest> {
@@ -129,10 +139,16 @@ impl ArtifactIntegrity {
         self.sha256
     }
 
+    /// Returns the expected SHA-512 digest.
+    #[must_use]
+    pub const fn sha512(&self) -> Option<Sha512Digest> {
+        self.sha512
+    }
+
     /// Returns whether at least one trustworthy digest is declared.
     #[must_use]
     pub const fn is_verifiable(&self) -> bool {
-        self.sha1.is_some() || self.sha256.is_some()
+        self.sha1.is_some() || self.sha256.is_some() || self.sha512.is_some()
     }
 }
 
@@ -186,6 +202,34 @@ mod tests {
             .parse()
             .expect("valid sha1");
         assert!(ArtifactIntegrity::none().with_sha1(digest).is_verifiable());
+
+        let sha512: Sha512Digest = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a\
+                                    2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+            .parse()
+            .expect("valid sha512");
+        assert!(
+            ArtifactIntegrity::none()
+                .with_sha512(sha512)
+                .is_verifiable()
+        );
+    }
+
+    #[test]
+    fn integrity_deserializes_legacy_payload_without_sha512() {
+        let legacy = r#"{"sha1":"a9993e364706816aba3e25717850c26c9cd0d89d"}"#;
+        let integrity: ArtifactIntegrity = serde_json::from_str(legacy).expect("legacy payload");
+        assert_eq!(
+            integrity.sha1(),
+            Some(
+                "a9993e364706816aba3e25717850c26c9cd0d89d"
+                    .parse()
+                    .expect("sha1")
+            )
+        );
+        assert_eq!(integrity.sha512(), None);
+
+        let round_trip = serde_json::to_string(&integrity).expect("serialize");
+        assert!(!round_trip.contains("sha512"));
     }
 
     #[test]

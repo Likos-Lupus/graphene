@@ -282,6 +282,7 @@ dependencies = [
  "graphene-java",
  "graphene-launch",
  "graphene-minecraft",
+ "graphene-modpack",
  "graphene-service",
  "serde_json",
  "sha1",
@@ -321,6 +322,7 @@ name = "graphene-core"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
  "uuid",
 ]
 
@@ -383,6 +385,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "graphene-modpack"
+version = "0.1.0"
+dependencies = [
+ "graphene-core",
+ "graphene-minecraft",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "url",
+]
+
+[[package]]
 name = "graphene-network"
 version = "0.1.0"
 dependencies = [
@@ -434,6 +449,7 @@ dependencies = [
  "graphene-java",
  "graphene-launch",
  "graphene-minecraft",
+ "graphene-modpack",
  "graphene-network",
  "graphene-platform",
  "graphene-providers",

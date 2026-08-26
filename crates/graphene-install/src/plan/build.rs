@@ -257,6 +257,9 @@ impl InstallPlan {
             metadata_artifacts,
             preparation,
             receipt,
+            seed_archive_layers: Vec::new(),
+            initial_content: Vec::new(),
+            pack_origin: None,
         };
 
         plan.validate()?;

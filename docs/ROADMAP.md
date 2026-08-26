@@ -69,8 +69,34 @@ security, and provider isolation remain convergent rather than forming a second 
 
 ## Phase 6 — Modpacks
 
-`.mrpack`, CurseForge packs, Prism/MultiMC import, generic local/URL archives, and a Graphene pack
-format/export path normalized to a common install model with archive-security coverage.
+External modpack/container formats are normalized into one Graphene-owned, deterministic,
+create-only installation model without introducing a second launcher pipeline: pack input is
+untrusted, runtime identities resolve through the existing component stack, downloads use the
+existing artifact boundary, publication stays transactional, and managed pack files converge on
+the existing desired-state lockfile so launch/verify/repair/content operations see ordinary
+Graphene instances.
+
+Implemented: the `graphene-modpack` bounded context with strict bounded archive indexing and
+deterministic format detection; Modrinth v1, CurseForge, Prism/MultiMC, Graphene pack v1, and
+explicitly-configured generic adapters (format DTOs private); immutable content-addressed pack
+source snapshots from local files or HTTPS URLs; exact CurseForge `(project_id, file_id)`
+resolution through the existing `ContentProvider` boundary with persisted provenance; a
+fingerprinted, validated, mutation-free `ModpackImportPlan`; generic `graphene-install` seed
+layers executing base runtime, managed files, embedded mods, and ordered seeds as one staged
+transaction behind one create-only publication; lockfile schema 3 with a bounded optional
+`pack_origin`, schema 1/2 read compatibility, and origin-preserving mutations and repair; public
+`ModpackService` inspect/plan_import/execute_import/plan_export/execute_export operations with
+progress, cancellation, typed errors, and diagnostics; strict Graphene pack v1 import; and
+deterministic export with explicit embedding/redistribution policy, stale-state checks,
+self-validation against its own import contract, and create-only output publication. Offline
+deterministic coverage includes hostile-input matrices per format, fake-provider exact-resolution
+tests, transaction failure injection via shared machinery, MultiMC embedded-mod promotion, export
+round-trip integration tests, and root facade workflows.
+
+**Exit:** hosts can inspect, plan, install, verify/repair, and re-export supported packs entirely
+through stable Graphene operations without provider/UI/string-parsing logic; committed instances
+are indistinguishable to downstream lifecycle code from directly assembled instances; real-world
+interop smokes are recorded honestly as NOT RUN in `docs/VALIDATION.md`.
 
 ## Phase 7 — Diagnostics
 
