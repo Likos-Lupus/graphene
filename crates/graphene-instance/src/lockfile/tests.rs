@@ -69,6 +69,7 @@ fn lockfile_validation_and_fingerprint_stability() {
         native_extractions: Vec::new(),
         generated_outputs: Vec::new(),
         content: Vec::new(),
+        pack_origin: None,
     };
 
     lockfile.validate().expect("valid lockfile");
@@ -122,4 +123,119 @@ fn lockfile_validation_and_fingerprint_stability() {
     let _desc2 = InstanceDescriptor::create(&NewInstanceSpec::with_id(id, "Name 2").unwrap());
     let fp3 = InstanceStateFingerprint::compute(id, &receipt, Some(&lockfile), None);
     assert_eq!(fp1, fp3);
+}
+
+#[test]
+fn pack_origin_round_trips_and_validates_bounds() {
+    use crate::LockedPackOrigin;
+    use graphene_core::Sha256Digest;
+
+    let id = InstanceId::new();
+    let receipt = fixture_receipt(id);
+    let digest: Sha256Digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        .parse()
+        .unwrap();
+
+    let origin = LockedPackOrigin::new(
+        "MODRINTH",
+        Some("Test Pack".to_string()),
+        Some("1.0.0".to_string()),
+        digest,
+        Some("project-1".to_string()),
+        None,
+    )
+    .expect("valid origin");
+    assert_eq!(origin.format, "MODRINTH");
+
+    let lockfile = InstanceLockfile {
+        schema_version: LOCKFILE_SCHEMA_VERSION,
+        instance_id: id,
+        minecraft_version: "1.21.1".to_string(),
+        components: receipt.components.clone(),
+        artifacts: Vec::new(),
+        native_extractions: Vec::new(),
+        generated_outputs: Vec::new(),
+        content: Vec::new(),
+        pack_origin: Some(origin),
+    };
+    lockfile
+        .validate()
+        .expect("schema 3 with pack origin validates");
+
+    let serialized = serde_json::to_string(&lockfile).unwrap();
+    let deserialized: InstanceLockfile = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(
+        deserialized.pack_origin.as_ref().map(|o| o.source_sha256),
+        Some(digest)
+    );
+    deserialized.validate().expect("round trip validates");
+
+    // Oversized external ids fail closed.
+    let bad = LockedPackOrigin::new(
+        "CURSEFORGE",
+        None,
+        None,
+        digest,
+        Some("x".repeat(200)),
+        None,
+    );
+    assert!(bad.is_err());
+
+    // Path separators in external ids are rejected.
+    let path_like = LockedPackOrigin::new(
+        "CURSEFORGE",
+        None,
+        None,
+        digest,
+        Some("../../etc/passwd".to_string()),
+        None,
+    );
+    assert!(path_like.is_err());
+}
+
+#[test]
+fn schema_2_lockfiles_read_without_pack_origin() {
+    let id = InstanceId::new();
+    let receipt = fixture_receipt(id);
+
+    let schema2 = InstanceLockfile {
+        schema_version: 2,
+        instance_id: id,
+        minecraft_version: "1.21.1".to_string(),
+        components: receipt.components,
+        artifacts: Vec::new(),
+        native_extractions: Vec::new(),
+        generated_outputs: Vec::new(),
+        content: Vec::new(),
+        pack_origin: None,
+    };
+    schema2
+        .validate()
+        .expect("schema 2 remains writable/readable");
+
+    // A legacy document without the field deserializes via #[serde(default)].
+    let mut json = serde_json::to_value(&schema2).unwrap();
+    json["pack_origin"] = serde_json::Value::Null;
+    json["schema_version"] = serde_json::json!(2);
+    let parsed: InstanceLockfile = serde_json::from_value(json).unwrap();
+    assert!(parsed.pack_origin.is_none());
+    parsed.validate().expect("legacy document parses");
+}
+
+#[test]
+fn unknown_future_schema_fails_closed() {
+    let id = InstanceId::new();
+    let receipt = fixture_receipt(id);
+    let future = InstanceLockfile {
+        schema_version: LOCKFILE_SCHEMA_VERSION + 1,
+        instance_id: id,
+        minecraft_version: "1.21.1".to_string(),
+        components: receipt.components,
+        artifacts: Vec::new(),
+        native_extractions: Vec::new(),
+        generated_outputs: Vec::new(),
+        content: Vec::new(),
+        pack_origin: None,
+    };
+    assert!(future.validate().is_err());
 }

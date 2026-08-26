@@ -57,7 +57,14 @@ impl InstallPlan {
 
         let mut ids = HashMap::<ArtifactId, &Artifact>::new();
         for planned in &self.artifacts {
-            if planned.artifact.sources.is_empty() || !planned.artifact.integrity.is_verifiable() {
+            // Source-less artifacts are valid only when a trustworthy content-addressed cache
+            // identity exists (pack snapshots / embedded managed files acquired during planning).
+            let cache_only_verifiable = planned.artifact.sources.is_empty()
+                && (planned.artifact.integrity.sha256().is_some()
+                    || planned.artifact.integrity.sha512().is_some());
+            if (!cache_only_verifiable && planned.artifact.sources.is_empty())
+                || !planned.artifact.integrity.is_verifiable()
+            {
                 return Err(install_error(
                     ErrorCode::InstallPlanInvalid,
                     "planned artifact is not verifiably acquirable",
@@ -119,9 +126,93 @@ impl InstallPlan {
 
         validate_preparation(self, &ids)?;
         validate_plan_materialization_completeness(self)?;
+        validate_seed_payload(self, &ids)?;
 
         Ok(())
     }
+}
+
+fn validate_seed_payload(plan: &InstallPlan, ids: &HashMap<ArtifactId, &Artifact>) -> Result<()> {
+    use super::MAX_SEED_ARCHIVE_LAYERS;
+
+    if plan.seed_archive_layers.len() > MAX_SEED_ARCHIVE_LAYERS {
+        return Err(install_error(
+            ErrorCode::InstallPlanInvalid,
+            "seed archive layer count exceeds its bound",
+        ));
+    }
+
+    let mut materialized_destinations = HashSet::new();
+    for materialization in plan
+        .shared_materializations
+        .iter()
+        .chain(&plan.instance_materializations)
+    {
+        materialized_destinations.insert(materialization.destination.as_str().to_ascii_lowercase());
+    }
+
+    let mut content_keys = HashSet::new();
+    for entry in &plan.initial_content {
+        if entry.entry_id.is_empty()
+            || !content_keys.insert(entry.entry_id.as_str())
+            || entry.artifact_logical_key.is_empty()
+        {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "initial content entry identity is invalid or duplicated",
+            ));
+        }
+    }
+    // Every initial content entry must reference a planned managed artifact logical key.
+    for entry in &plan.initial_content {
+        let referenced = plan
+            .instance_materializations
+            .iter()
+            .any(|materialization| {
+                format!("instance:{}", materialization.destination.as_str())
+                    == entry.artifact_logical_key
+            });
+        if !referenced {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "initial content entry references an unknown managed artifact",
+            )
+            .with_context("logical_key", entry.artifact_logical_key.clone()));
+        }
+    }
+    drop(content_keys);
+
+    for layer in &plan.seed_archive_layers {
+        if !ids.contains_key(&layer.archive_artifact_id) {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "seed archive layer references an unknown artifact",
+            ));
+        }
+
+        let destination = layer.destination.as_str();
+        if !destination.starts_with(".minecraft/") {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "seed destination is outside the instance minecraft root",
+            ));
+        }
+        if materialized_destinations.contains(&destination.to_ascii_lowercase()) {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "seed destination collides with a managed materialization",
+            )
+            .with_context("destination", destination.to_owned()));
+        }
+        if layer.expected_size == 0 {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "seed layer declares an empty payload",
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn receipt_components_match(plan: &InstallPlan) -> bool {
@@ -406,13 +497,34 @@ fn validate_plan_materialization_completeness(plan: &InstallPlan) -> Result<()> 
             )
         })
         .collect::<HashSet<_>>();
-    if actual.len() != plan.shared_materializations.len() + plan.instance_materializations.len()
-        || actual != expected
-    {
+    if actual.len() != plan.shared_materializations.len() + plan.instance_materializations.len() {
         return Err(install_error(
             ErrorCode::InstallPlanInvalid,
-            "installation materializations do not exactly match the resolved artifact model",
+            "installation materializations contain exact duplicates",
         ));
+    }
+
+    // The resolved base model must be fully represented; composite plans may additionally carry
+    // pack-managed instance payload, but only inside the managed instance root.
+    for entry in &expected {
+        if !actual.contains(entry) {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "installation materializations do not exactly match the resolved artifact model",
+            ));
+        }
+    }
+    for (artifact_id, destination, scope) in &actual {
+        if expected.contains(&(*artifact_id, destination.clone(), *scope)) {
+            continue;
+        }
+        if *scope != MaterializationScope::Instance || !destination.starts_with(".minecraft/") {
+            return Err(install_error(
+                ErrorCode::InstallPlanInvalid,
+                "extra materialization is outside the pack-managed instance root",
+            )
+            .with_context("destination", destination.clone()));
+        }
     }
 
     let expected_natives = plan

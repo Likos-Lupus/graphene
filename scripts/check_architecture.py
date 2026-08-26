@@ -20,6 +20,7 @@ PACKAGE_NAMES = [
     "graphene-auth",
     "graphene-content",
     "graphene-providers",
+    "graphene-modpack",
     "graphene-install",
     "graphene-launch",
     "graphene-service",
@@ -60,6 +61,16 @@ EXPLICIT_FORBIDDEN = {
     ("graphene-minecraft", "graphene-content"),
     ("graphene-auth", "graphene-content"),
     ("graphene-java", "graphene-content"),
+    ("graphene-modpack", "graphene-service"),
+    ("graphene-modpack", "graphene-network"),
+    ("graphene-modpack", "graphene-storage"),
+    ("graphene-modpack", "graphene-platform"),
+    ("graphene-modpack", "graphene-providers"),
+    ("graphene-modpack", "graphene-launch"),
+    ("graphene-install", "graphene-modpack"),
+    ("graphene-content", "graphene-modpack"),
+    ("graphene-instance", "graphene-modpack"),
+    ("graphene-launch", "graphene-modpack"),
 }
 
 MAX_CRATE_ROOT_LINES = 120
@@ -72,14 +83,17 @@ PUBLIC_DTO_RE = re.compile(
 )
 
 
-def dependencies(manifest: pathlib.Path) -> set[str]:
+def dependencies(
+    manifest: pathlib.Path,
+    sections: tuple[str, ...] = ("dependencies", "build-dependencies"),
+) -> set[str]:
     with manifest.open("rb") as handle:
         document = tomllib.load(handle)
     names: set[str] = set()
-    for section in ("dependencies", "dev-dependencies", "build-dependencies"):
+    for section in sections:
         names.update(document.get(section, {}).keys())
     for target_table in document.get("target", {}).values():
-        for section in ("dependencies", "dev-dependencies", "build-dependencies"):
+        for section in sections:
             names.update(target_table.get(section, {}).keys())
     return names
 
@@ -112,10 +126,13 @@ def main() -> None:
     graph = {name: dependencies(path) for name, path in PACKAGES.items()}
     internal = set(PACKAGES)
 
-    for package, deps in graph.items():
-        forbidden_ui = deps & UI_DEPENDENCIES
+    for package, path in PACKAGES.items():
+        forbidden_ui = dependencies(
+            path, ("dependencies", "dev-dependencies", "build-dependencies")
+        ) & UI_DEPENDENCIES
         if forbidden_ui:
             fail(f"{package} has UI dependency {sorted(forbidden_ui)}")
+    for package, deps in graph.items():
         if package != "graphene-network" and "reqwest" in deps:
             fail(f"reqwest escaped network boundary into {package}")
 
@@ -154,7 +171,7 @@ def main() -> None:
             relative = source_path.relative_to(ROOT)
             if package != "graphene-network" and re.search(r"\breqwest\s*::", text):
                 fail(f"reqwest implementation type referenced by {relative}")
-            if package != "graphene-providers" and DTO_TYPE_RE.search(text):
+            if package not in {"graphene-providers", "graphene-modpack"} and DTO_TYPE_RE.search(text):
                 fail(f"provider DTO-like type leaked into {relative}")
             if package == "graphene-providers" and PUBLIC_DTO_RE.search(text):
                 fail(f"provider DTO publicly exported from {relative}")

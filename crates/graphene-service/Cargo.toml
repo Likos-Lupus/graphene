@@ -17,6 +17,7 @@ graphene-minecraft.workspace = true
 graphene-instance.workspace = true
 graphene-content.workspace = true
 graphene-java.workspace = true
+graphene-modpack.workspace = true
 graphene-providers.workspace = true
 graphene-install.workspace = true
 graphene-launch.workspace = true
@@ -27,3 +28,5 @@ sha2.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+graphene-storage.workspace = true
+tokio.workspace = true

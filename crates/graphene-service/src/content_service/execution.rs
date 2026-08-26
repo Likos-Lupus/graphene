@@ -253,6 +253,11 @@ pub async fn execute_content_mutation(
             .map(|l| l.generated_outputs.clone())
             .unwrap_or_default(),
         content: plan.resulting_lockfile_entries.clone(),
+        // Historical pack provenance survives unrelated content mutations; only an explicit
+        // future migration may remove it.
+        pack_origin: current_lockfile
+            .as_ref()
+            .and_then(|l| l.pack_origin.clone()),
     };
 
     new_lockfile.validate()?;

@@ -17,6 +17,7 @@ members = [".",
     "crates/graphene-auth",
     "crates/graphene-providers",
     "crates/graphene-content",
+    "crates/graphene-modpack",
     "crates/graphene-install",
     "crates/graphene-launch",
     "crates/graphene-service",
@@ -39,6 +40,7 @@ graphene-instance = { path = "crates/graphene-instance", version = "0.1.0" }
 graphene-java = { path = "crates/graphene-java", version = "0.1.0" }
 graphene-auth = { path = "crates/graphene-auth", version = "0.1.0" }
 graphene-content = { path = "crates/graphene-content", version = "0.1.0" }
+graphene-modpack = { path = "crates/graphene-modpack", version = "0.1.0" }
 graphene-providers = { path = "crates/graphene-providers", version = "0.1.0" }
 graphene-install = { path = "crates/graphene-install", version = "0.1.0" }
 graphene-launch = { path = "crates/graphene-launch", version = "0.1.0" }
@@ -46,6 +48,7 @@ graphene-service = { path = "crates/graphene-service", version = "0.1.0" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+url = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "system-proxy"] }
@@ -68,6 +71,7 @@ graphene-auth.workspace = true
 graphene-install.workspace = true
 graphene-launch.workspace = true
 graphene-service.workspace = true
+graphene-modpack.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

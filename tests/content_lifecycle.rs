@@ -96,6 +96,7 @@ async fn content_management_lifecycle_end_to_end() {
         native_extractions: Vec::new(),
         generated_outputs: Vec::new(),
         content: Vec::new(),
+        pack_origin: None,
     };
     let lock_path = repo.paths().lockfile_path(id);
     fs::write(&lock_path, serde_json::to_vec_pretty(&lockfile).unwrap()).unwrap();

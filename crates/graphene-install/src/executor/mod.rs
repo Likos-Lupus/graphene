@@ -2,6 +2,7 @@ mod lock;
 mod materialize;
 mod metadata;
 mod preparation;
+mod seed;
 mod staging;
 
 use self::{
@@ -308,6 +309,18 @@ impl InstallExecutor {
         }
 
         checkpoint(operation)?;
+        seed::apply_seed_layers(
+            plan,
+            &acquired
+                .iter()
+                .map(|(id, acquired)| (*id, acquired.path.clone()))
+                .collect(),
+            staging_root,
+            operation,
+        )
+        .await?;
+
+        checkpoint(operation)?;
         operation.set_stage("write-metadata")?;
         let lockfile = assemble_lockfile(self.data_root.path(), plan)?;
         write_instance_metadata(
@@ -490,6 +503,7 @@ fn assemble_lockfile(data_root: &Path, plan: &InstallPlan) -> Result<InstanceLoc
         artifacts,
         native_extractions,
         generated_outputs,
-        content: Vec::new(),
+        content: plan.initial_content.clone(),
+        pack_origin: plan.pack_origin.clone(),
     })
 }

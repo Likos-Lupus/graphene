@@ -1,8 +1,12 @@
 mod build;
+mod seed;
 mod validate;
 
+#[allow(unused_imports)]
+pub use seed::{MAX_SEED_ARCHIVE_LAYERS, MAX_SEED_ENTRY_NAME_BYTES, SeedArchiveLayer};
+
 use graphene_core::{Artifact, ArtifactId};
-use graphene_instance::{InstallReceipt, InstanceDescriptor};
+use graphene_instance::{InstallReceipt, InstanceDescriptor, LockedContentEntry, LockedPackOrigin};
 use graphene_minecraft::{
     ComponentPreparationRecipe, ManagedPath, MinecraftVersionId, ResolvedArtifact,
     ResolvedMinecraft,
@@ -58,6 +62,15 @@ pub struct InstallPlan {
     pub metadata_artifacts: Vec<ResolvedArtifact>,
     pub preparation: ComponentPreparationRecipe,
     pub receipt: InstallReceipt,
+    /// Ordered initial payload extracted from cached archives (empty for ordinary installs).
+    #[serde(default)]
+    pub seed_archive_layers: Vec<SeedArchiveLayer>,
+    /// Initial managed content entries written into the first lockfile (empty for ordinary installs).
+    #[serde(default)]
+    pub initial_content: Vec<LockedContentEntry>,
+    /// Bounded historical pack provenance persisted into the lockfile (`None` for ordinary installs).
+    #[serde(default)]
+    pub pack_origin: Option<LockedPackOrigin>,
 }
 
 #[cfg(test)]

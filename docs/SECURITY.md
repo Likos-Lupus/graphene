@@ -167,3 +167,19 @@ Deterministic tests cover many trust boundaries, but this worktree has not been 
 validated with the Rust toolchain or real upstream/runtime smokes because `cargo`/`rustc` are absent
 from the execution environment. Real validation status is recorded only in
 [`VALIDATION.md`](VALIDATION.md); fixture success must not be presented as production smoke success.
+
+## Modpacks
+
+Pack input is treated as untrusted archive data. Sources are pinned into the content-addressed cache
+before parsing; large-pack paths stream through bounded readers instead of full-buffer reads. Entry
+counts, name bytes, sizes, total expansion, and manifest bodies are bounded;
+traversal/absolute/drive/symlink/special/collision forms fail closed. Pack-declared URLs pass a
+strict HTTPS structural policy, and persisted lockfile state stores no raw credentials or signed
+URLs. No pack metadata can request shell, native, or installer execution: import has no execution
+fields, and unknown manifest content fails closed.
+
+Graphene pack export excludes launcher-internal state (`.graphene/`, descriptor/receipt paths),
+requires an explicit host embedding decision per destination, persists provenance as bounded
+provider references rather than raw URLs where available, and publishes create-only after
+re-validating the archive against the import contract. Residual risk: real-world interop smokes
+remain NOT RUN (see VALIDATION.md).

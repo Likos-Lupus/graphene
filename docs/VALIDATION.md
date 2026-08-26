@@ -182,3 +182,40 @@ A smoke record may contain date, platform/architecture, exact public version ide
 hashes/operation stages, Graphene revision/delta, public account/profile identity where appropriate,
 and pass/fail outcome. It must not contain tokens, device/user codes, secret store content, real
 credentials, or unbounded logs.
+
+## Modrinth pack import smoke
+
+Procedure: acquire a real `.mrpack` with required + optional files; run
+`Graphene::modpacks().inspect(...)` then `plan_import`/`execute_import` against a scratch data root;
+launch the resulting instance.
+
+**Status: NOT RUN.** Prerequisites: public internet access to `api.modrinth.com`/CDN and a
+representative pack fixture.
+
+## CurseForge pack import smoke
+
+Procedure: same as above with a CurseForge manifest pack and a distributor API key configured;
+verify exact `(project_id, file_id)` resolution and provenance persistence.
+
+**Status: NOT RUN.** Prerequisites: CurseForge API key and live network.
+
+## Prism/MultiMC instance import smoke
+
+Procedure: export a standard MultiMC/Fabric instance, import it via the service, confirm embedded
+mods are rejected-or-promoted per current support boundary and unsupported components fail typed.
+
+**Status: NOT RUN.** Prerequisites: representative MultiMC export fixture (offline-capable).
+
+## Graphene pack v1 round-trip smoke
+
+Deterministic offline coverage exists at `crates/graphene-service/tests/modpack_export_roundtrip.rs`
+(export → re-import → normalized assertions, staleness, create-only publication). A real-fixture
+smoke over a large pack remains:
+
+**Status: NOT RUN.** Prerequisites: representative large pack archive.
+
+## Recording rule
+
+Real smokes above are recorded only as PASS after execution against live services; absent that, they
+remain NOT RUN with prerequisites stated. Offline deterministic suites are listed in the repository
+verification gate and must stay green independently.

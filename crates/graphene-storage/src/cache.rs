@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 pub enum CacheAlgorithm {
     Sha1,
     Sha256,
+    Sha512,
 }
 
 /// Deterministic committed cache address.
@@ -20,13 +21,15 @@ impl CacheAddress {
     pub(crate) fn from_integrity(root: &Path, integrity: &ArtifactIntegrity) -> Result<Self> {
         let (algorithm, algorithm_dir, digest) = if let Some(digest) = integrity.sha256() {
             (CacheAlgorithm::Sha256, "sha256", digest.to_string())
+        } else if let Some(digest) = integrity.sha512() {
+            (CacheAlgorithm::Sha512, "sha512", digest.to_string())
         } else if let Some(digest) = integrity.sha1() {
             (CacheAlgorithm::Sha1, "sha1", digest.to_string())
         } else {
             return Err(GrapheneError::new(
                 ErrorCode::CacheIdentityUnavailable,
                 ErrorKind::Integrity,
-                "cache identity requires SHA-1 or SHA-256 integrity",
+                "cache identity requires SHA-1, SHA-256 or SHA-512 integrity",
             ));
         };
 
@@ -43,7 +46,7 @@ impl CacheAddress {
         })
     }
 
-    /// Returns the algorithm selected for identity (SHA-256 preferred over SHA-1).
+    /// Returns the algorithm selected for identity (SHA-256 > SHA-512 > SHA-1).
     #[must_use]
     pub const fn algorithm(&self) -> CacheAlgorithm {
         self.algorithm

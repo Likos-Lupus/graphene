@@ -18,7 +18,7 @@ pub use archive::{extract_managed_tar_gz, extract_managed_zip};
 pub use executor::InstallExecutor;
 pub use plan::{
     INSTALL_PLAN_VERSION, InstallPlan, MAX_INSTALL_ARTIFACTS, Materialization,
-    MaterializationScope, NativeExtraction, PlannedArtifact, PlannedInstance,
+    MaterializationScope, NativeExtraction, PlannedArtifact, PlannedInstance, SeedArchiveLayer,
 };
 pub use processor::{
     InstallToolRunner, ProcessorExpansionContext, SelectedToolJava, ToolJavaFuture, ToolRunRequest,

@@ -80,6 +80,12 @@ pub use graphene_minecraft::{
     ResolvedLibrary, ResolvedLoader, ResolvedLogging, ResolvedMinecraft, Rule, RuleAction,
     RuleContext, VersionManifest, VersionSummary, loader_support_diagnostic,
 };
+pub use graphene_modpack::{
+    EmbeddedPackFile, FileSelection, NormalizedModpack, OptionalSelectionPolicy, PackArchiveIndex,
+    PackDiagnostic, PackDiagnosticCode, PackFormat, PackInspection, PackMetadata,
+    PackOptionalChoice, PackRuntimeRequirement, PackSourceSnapshot, PackTargetSide,
+    PendingProviderFile, ProviderFileRef, SeedLayer,
+};
 pub use graphene_service::{
     AccountService, AccountSessionOperation, AdoptiumProviderConfig, Architecture,
     ArtifactOperation, ArtifactService, AvailableContentUpdate, ContentExecuteOperation,
@@ -92,7 +98,9 @@ pub use graphene_service::{
     InstanceRepairOperation, InstanceRepository, InstanceService, InstanceVerifyOperation,
     JavaService, LaunchService, LoaderResolveOperation, LoaderService, LoaderVersionsOperation,
     ManagedJavaOperation, MicrosoftAuthConfig, MicrosoftLoginOperation, MicrosoftServiceEndpoints,
-    MinecraftManifestOperation, MinecraftService, ModrinthProviderConfig, MojangProviderConfig,
-    NeoForgeProviderConfig, NetworkConfig, OperatingSystem, OperationService, PlatformInfo,
-    ProxyPolicy, RedirectPolicy, RetryPolicy, SyntheticOperation, VerifiedArtifact,
+    MinecraftManifestOperation, MinecraftService, ModpackExecutionOperation,
+    ModpackInspectionOperation, ModpackPlanOperation, ModpackService, ModrinthProviderConfig,
+    MojangProviderConfig, NeoForgeProviderConfig, NetworkConfig, OperatingSystem, OperationService,
+    PackSource, PlatformInfo, ProxyPolicy, RedirectPolicy, RetryPolicy, SyntheticOperation,
+    VerifiedArtifact,
 };

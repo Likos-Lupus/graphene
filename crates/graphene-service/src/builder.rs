@@ -124,6 +124,12 @@ impl Graphene {
     pub fn content(&self) -> ContentService {
         ContentService::new(Arc::clone(&self.context))
     }
+
+    /// Returns the modpack inspect/plan/execute import service.
+    #[must_use]
+    pub fn modpacks(&self) -> crate::modpack_service::ModpackService {
+        crate::modpack_service::ModpackService::new(Arc::clone(&self.context))
+    }
 }
 
 /// Validating constructor for a fully initialized Graphene engine.

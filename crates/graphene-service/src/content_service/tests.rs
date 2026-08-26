@@ -87,6 +87,7 @@ fn create_test_instance(engine: &Graphene, id: InstanceId) {
         native_extractions: Vec::new(),
         generated_outputs: Vec::new(),
         content: Vec::new(),
+        pack_origin: None,
     };
     let lock_path = repo.paths().lockfile_path(id);
     graphene_storage::write_json_atomic(&lock_path, &lockfile).unwrap();
@@ -338,6 +339,7 @@ async fn verify_and_repair_convergence_with_managed_mod() {
             enabled: true,
             dependencies: Vec::new(),
         }],
+        pack_origin: None,
     };
 
     let lock_path = repo.paths().lockfile_path(id);

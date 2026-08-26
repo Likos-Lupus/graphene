@@ -3,7 +3,7 @@ use crate::{
     lockfile::model::{
         InstanceLockfile, LOCKFILE_SCHEMA_VERSION, MAX_LOCKED_ARTIFACTS, MAX_LOCKED_COMPONENTS,
         MAX_LOCKED_CONTENT, MAX_LOCKED_DEPENDENCIES_PER_ENTRY, MAX_LOCKED_EXTRACTIONS,
-        MAX_LOCKED_OUTPUTS,
+        MAX_LOCKED_OUTPUTS, OLDEST_READABLE_LOCKFILE_SCHEMA_VERSION,
     },
 };
 use graphene_core::Result;
@@ -12,13 +12,15 @@ use std::collections::HashSet;
 impl InstanceLockfile {
     /// Validates lockfile structure, bounds, and paths.
     pub fn validate(&self) -> Result<()> {
-        if self.schema_version != 1 && self.schema_version != LOCKFILE_SCHEMA_VERSION {
+        if self.schema_version < OLDEST_READABLE_LOCKFILE_SCHEMA_VERSION
+            || self.schema_version > LOCKFILE_SCHEMA_VERSION
+        {
             return Err(instance_error(
                 "instance lockfile schema version is unsupported",
             ));
         }
 
-        if self.schema_version == 1 && !self.content.is_empty() {
+        if self.schema_version < 2 && !self.content.is_empty() {
             return Err(instance_error(
                 "schema version 1 lockfile must not contain managed content entries",
             ));
@@ -110,6 +112,10 @@ impl InstanceLockfile {
                     "lockfile content entry dependency count exceeds maximum limit",
                 ));
             }
+        }
+
+        if let Some(origin) = &self.pack_origin {
+            origin.validate()?;
         }
 
         Ok(())

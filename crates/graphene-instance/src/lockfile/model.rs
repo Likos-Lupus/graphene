@@ -1,15 +1,19 @@
 use crate::{InstalledComponent, ManagedRelativePath};
-use graphene_core::{ArtifactIntegrity, ArtifactKind, ArtifactSource, InstanceId, Sha256Digest};
+use graphene_core::{
+    ArtifactIntegrity, ArtifactKind, ArtifactSource, GrapheneError, InstanceId, Sha256Digest,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const LOCKFILE_SCHEMA_VERSION: u32 = 2;
+pub const LOCKFILE_SCHEMA_VERSION: u32 = 3;
+pub const OLDEST_READABLE_LOCKFILE_SCHEMA_VERSION: u32 = 1;
 pub const MAX_LOCKED_COMPONENTS: usize = 64;
 pub const MAX_LOCKED_ARTIFACTS: usize = 4096;
 pub const MAX_LOCKED_OUTPUTS: usize = 256;
 pub const MAX_LOCKED_EXTRACTIONS: usize = 256;
 pub const MAX_LOCKED_CONTENT: usize = 1024;
 pub const MAX_LOCKED_DEPENDENCIES_PER_ENTRY: usize = 64;
+pub const MAX_PACK_ORIGIN_STRING_CHARS: usize = 128;
 
 /// Materialization scope and replacement strategy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -76,6 +80,85 @@ pub struct LockedContentEntry {
     pub dependencies: Vec<LockedContentDependency>,
 }
 
+/// Bounded historical provenance describing how an instance was originally created from an
+/// external pack. This is never a second desired-state authority: current bytes remain the
+/// `artifacts`, `generated_outputs`, and `content` lists. Raw source URLs, local host paths,
+/// credentials, and full upstream manifests are deliberately unrepresentable here.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LockedPackOrigin {
+    /// Normalized Graphene pack format identity (e.g. `MODRINTH`, `CURSEFORCE`).
+    pub format: String,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub source_sha256: Sha256Digest,
+    pub external_project_id: Option<String>,
+    pub external_version_id: Option<String>,
+}
+
+impl LockedPackOrigin {
+    /// Creates a bounded origin record after validating every string field.
+    pub fn new(
+        format: impl Into<String>,
+        name: Option<String>,
+        version: Option<String>,
+        source_sha256: Sha256Digest,
+        external_project_id: Option<String>,
+        external_version_id: Option<String>,
+    ) -> Result<Self, GrapheneError> {
+        let format = format.into();
+        if format.is_empty() || format.chars().count() > MAX_PACK_ORIGIN_STRING_CHARS {
+            return Err(crate::error::instance_error(
+                "pack origin format is missing or exceeds its bound",
+            ));
+        }
+        for field in [&name, &version] {
+            if let Some(value) = field
+                && (value.is_empty()
+                    || value.chars().count() > MAX_PACK_ORIGIN_STRING_CHARS
+                    || value.chars().any(char::is_control))
+            {
+                return Err(crate::error::instance_error(
+                    "pack origin display field is empty, control-bearing, or exceeds its bound",
+                ));
+            }
+        }
+        for field in [&external_project_id, &external_version_id] {
+            if let Some(value) = field
+                && (value.is_empty()
+                    || value.chars().count() > MAX_PACK_ORIGIN_STRING_CHARS
+                    || value
+                        .chars()
+                        .any(|c| c.is_control() || c == '/' || c == '\\'))
+            {
+                return Err(crate::error::instance_error(
+                    "pack origin external id is empty, path-like, or exceeds its bound",
+                ));
+            }
+        }
+        Ok(Self {
+            format,
+            name,
+            version,
+            source_sha256,
+            external_project_id,
+            external_version_id,
+        })
+    }
+
+    /// Re-validates a deserialized origin record against the same bounds as [`Self::new`].
+    pub fn validate(&self) -> Result<(), GrapheneError> {
+        Self::new(
+            self.format.clone(),
+            self.name.clone(),
+            self.version.clone(),
+            self.source_sha256,
+            self.external_project_id.clone(),
+            self.external_version_id.clone(),
+        )
+        .map(|_| ())
+    }
+}
+
 /// Durable, provider-neutral desired state lockfile persisted at `instances/<id>/.graphene/lock.json`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstanceLockfile {
@@ -88,4 +171,6 @@ pub struct InstanceLockfile {
     pub generated_outputs: Vec<LockedGeneratedOutput>,
     #[serde(default)]
     pub content: Vec<LockedContentEntry>,
+    #[serde(default)]
+    pub pack_origin: Option<LockedPackOrigin>,
 }

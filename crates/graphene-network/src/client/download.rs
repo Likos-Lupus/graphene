@@ -3,11 +3,11 @@ use crate::{retry::retryable_status, verify_transfer};
 use futures_util::StreamExt;
 use graphene_core::{
     Artifact, ArtifactId, ArtifactSource, ErrorCode, ErrorKind, GrapheneError, OperationController,
-    Progress, Result, Sha1Digest, Sha256Digest,
+    Progress, Result, Sha1Digest, Sha256Digest, Sha512Digest,
 };
 use reqwest::StatusCode;
 use sha1::Sha1;
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, Sha512};
 use std::{path::Path, sync::Arc, time::Duration};
 use tokio::{
     fs::{self, OpenOptions},
@@ -38,7 +38,7 @@ impl NetworkClient {
             return Err(GrapheneError::new(
                 ErrorCode::CacheIdentityUnavailable,
                 ErrorKind::Integrity,
-                "verified cache acquisition requires SHA-1 or SHA-256",
+                "verified cache acquisition requires SHA-1, SHA-256 or SHA-512",
             ));
         }
 
@@ -277,6 +277,7 @@ impl NetworkClient {
             })?;
         let mut sha1 = Sha1::new();
         let mut sha256 = Sha256::new();
+        let mut sha512 = Sha512::new();
         let mut bytes = 0_u64;
         let mut stream = response.bytes_stream();
 
@@ -302,6 +303,7 @@ impl NetworkClient {
 
             sha1.update(&chunk);
             sha256.update(&chunk);
+            sha512.update(&chunk);
             bytes = bytes.saturating_add(chunk.len() as u64);
 
             match artifact.expected_size {
@@ -348,17 +350,21 @@ impl NetworkClient {
         checkpoint(operation, ErrorCode::DownloadCancelled).map_err(AttemptError::non_retryable)?;
         let sha1 = sha1.finalize();
         let sha256 = sha256.finalize();
+        let sha512 = sha512.finalize();
         let mut sha1_bytes = [0_u8; 20];
         let mut sha256_bytes = [0_u8; 32];
+        let mut sha512_bytes = [0_u8; 64];
 
         sha1_bytes.copy_from_slice(&sha1);
         sha256_bytes.copy_from_slice(&sha256);
+        sha512_bytes.copy_from_slice(&sha512);
 
         let transfer = TransferResult {
             path: temporary_path.to_path_buf(),
             bytes,
             sha1: Sha1Digest::from_bytes(sha1_bytes),
             sha256: Sha256Digest::from_bytes(sha256_bytes),
+            sha512: Sha512Digest::from_bytes(sha512_bytes),
             source_host: host,
         };
 

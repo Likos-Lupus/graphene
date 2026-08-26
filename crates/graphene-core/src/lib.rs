@@ -17,7 +17,7 @@ mod secret;
 pub use artifact::{Artifact, ArtifactIntegrity, ArtifactKind, ArtifactSource, CachePolicy};
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticParameters, DiagnosticSeverity};
 pub use error::{ErrorCode, ErrorContext, ErrorKind, ErrorSummary, GrapheneError};
-pub use hash::{HashParseError, Sha1Digest, Sha256Digest};
+pub use hash::{HashParseError, Sha1Digest, Sha256Digest, Sha512Digest};
 pub use id::{AccountId, ArtifactId, IdParseError, InstanceId, ManagedRuntimeId, OperationId};
 pub use operation::{
     CancellationToken, OperationController, OperationEvent, OperationEventKind,

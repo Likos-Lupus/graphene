@@ -2,13 +2,14 @@ use crate::{NetworkConfig, ProxyPolicy};
 use futures_util::StreamExt;
 use graphene_core::{
     ErrorCode, ErrorKind, GrapheneError, OperationController, Result, SensitiveString, Sha1Digest,
-    Sha256Digest,
+    Sha256Digest, Sha512Digest,
 };
 use reqwest::Client;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Semaphore;
 
 mod download;
+mod observed;
 mod verification;
 
 #[cfg(test)]
@@ -22,6 +23,7 @@ pub struct TransferResult {
     pub bytes: u64,
     pub sha1: Sha1Digest,
     pub sha256: Sha256Digest,
+    pub sha512: Sha512Digest,
     pub source_host: Option<String>,
 }
 
@@ -31,6 +33,7 @@ pub struct VerifiedFile {
     pub bytes: u64,
     pub sha1: Sha1Digest,
     pub sha256: Sha256Digest,
+    pub sha512: Sha512Digest,
 }
 
 /// Bounded in-memory HTTP response used by protocol adapters without exposing Reqwest types.
@@ -39,6 +42,8 @@ pub struct BoundedResponse {
     pub status: u16,
     pub body: Vec<u8>,
 }
+
+pub use observed::ObservedTransfer;
 
 /// Shared provider-neutral HTTP client with bounded concurrency.
 #[derive(Clone)]
