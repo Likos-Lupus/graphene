@@ -24,7 +24,7 @@ python scripts/check_hygiene.py
 |---------------------------------------------------------|--------|-------------------------------------------------------------------|
 | `cargo fmt --all -- --check`                            | PASS   | Clean formatting across all crates, tests, and facade.            |
 | `cargo check --workspace --all-targets`                 | PASS   | Clean workspace compilation across all crates.                    |
-| `cargo test --workspace`                                | PASS   | All unit, integration, and facade tests passed (202 tests total). |
+| `cargo test --workspace`                                | PASS   | All unit, integration, and facade tests passed (373 tests total). |
 | `cargo clippy --workspace --all-targets -- -D warnings` | PASS   | 0 warnings across entire workspace.                               |
 | `cargo doc --workspace --no-deps`                       | PASS   | Clean rustdoc generation across workspace.                        |
 | `python scripts/check_architecture.py`                  | PASS   | Strict layer boundaries and forbidden dependency checks passed.   |
@@ -213,6 +213,24 @@ Deterministic offline coverage exists at `crates/graphene-service/tests/modpack_
 smoke over a large pack remains:
 
 **Status: NOT RUN.** Prerequisites: representative large pack archive.
+
+## Diagnostic real smoke
+
+Procedure: on a scratch data root, diagnose a corrupted/legacy managed artifact, an incompatible
+Java runtime, a duplicate-mod conflict, and a real fake-Java launch that writes a crash fixture and
+exits non-zero. Confirm finding codes/confidence, secret redaction, report completeness, and that
+recommendations converge on the existing repair/Java/content services without mutating instance
+state. A fake-Java process fixture is acceptable for launcher-side coverage but does not substitute
+for a real Minecraft runtime smoke.
+
+Deterministic offline coverage: `graphene-diagnostics` unit/integration tests (models, redaction,
+parser fixtures, verification/Java/content correlation), `crates/graphene-service/src/diagnostics_service/tests.rs`
+(collection bounds, symlink escape, cancellation, non-regular files), and root
+`tests/diagnostics_lifecycle.rs` (healthy/legacy, crash + non-zero exit, undetermined cause,
+determinism, read-only, redaction, stale-plan protection).
+
+**Status: NOT RUN** for the real fake-Java launch smoke. Prerequisites: a real Java runtime and a
+pinned Minecraft/loader instance built by the engine.
 
 ## Recording rule
 

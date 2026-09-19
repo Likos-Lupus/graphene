@@ -277,6 +277,7 @@ dependencies = [
  "graphene-auth",
  "graphene-content",
  "graphene-core",
+ "graphene-diagnostics",
  "graphene-install",
  "graphene-instance",
  "graphene-java",
@@ -284,6 +285,7 @@ dependencies = [
  "graphene-minecraft",
  "graphene-modpack",
  "graphene-service",
+ "serde",
  "serde_json",
  "sha1",
  "sha2",
@@ -324,6 +326,17 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
+]
+
+[[package]]
+name = "graphene-diagnostics"
+version = "0.1.0"
+dependencies = [
+ "graphene-content",
+ "graphene-core",
+ "graphene-instance",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -444,6 +457,7 @@ dependencies = [
  "graphene-auth",
  "graphene-content",
  "graphene-core",
+ "graphene-diagnostics",
  "graphene-install",
  "graphene-instance",
  "graphene-java",

@@ -187,6 +187,24 @@ are verified before extraction, staged, probed, descriptor-validated, and publis
 The reference distribution adapter is an implementation behind the port, not an architectural
 requirement for every distributor.
 
+## Diagnostics bounded context
+
+`graphene-diagnostics` owns provider-neutral diagnostic models, bounded text/crash parsing,
+deterministic secret/path redaction, evidence correlation, confidence classification, and
+non-mutating recommendation derivation. It may depend on stable Graphene-owned domain values from
+`graphene-core`, `graphene-instance`, and `graphene-content`; it never depends on
+`graphene-service`, providers, networking, storage, authentication, launch, modpack, install,
+Minecraft/platform implementations, or UI/host crates. `graphene-instance`, `graphene-content`,
+`graphene-java`, and `graphene-launch` do not gain a reverse dependency on diagnostics.
+
+Filesystem access, instance leases, Java probing/selection, content scanning, and service
+composition stay in `graphene-service`: `DiagnosticService` orchestrates existing operations
+(verification, content scan, Java selection) under the shared instance lease and passes normalized
+snapshots/bytes into the diagnostics crate. Diagnosis is read-only and introduces no second repair
+pipeline; recommendations converge on existing verify/repair, Java, and content planning/execution
+APIs. `scripts/check_architecture.py` treats `graphene-diagnostics` as an engine crate and encodes
+these forbidden edges.
+
 ## Architecture checks
 
 `scripts/check_architecture.py` should fail for durable violations such as:

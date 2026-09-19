@@ -130,6 +130,12 @@ impl Graphene {
     pub fn modpacks(&self) -> crate::modpack_service::ModpackService {
         crate::modpack_service::ModpackService::new(Arc::clone(&self.context))
     }
+
+    /// Returns the bounded, read-only diagnostic service.
+    #[must_use]
+    pub fn diagnostics(&self) -> crate::diagnostics_service::DiagnosticService {
+        crate::diagnostics_service::DiagnosticService::new(Arc::clone(&self.context))
+    }
 }
 
 /// Validating constructor for a fully initialized Graphene engine.

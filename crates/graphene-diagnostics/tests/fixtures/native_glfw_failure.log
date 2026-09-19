@@ -1,0 +1,3 @@
+java.lang.UnsatisfiedLinkError: Failed to load natives: lwjgl
+	at net.minecraft.client.Main.main(Main.java:1)
+GLFW error 65542: WGL: The driver does not appear to support OpenGL
