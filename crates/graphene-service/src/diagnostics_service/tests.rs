@@ -145,6 +145,7 @@ fn non_regular_source_file_is_skipped() {
 #[cfg(unix)]
 #[test]
 fn symlink_escaping_instance_is_rejected() {
+    use graphene_diagnostics::SECRET_PLACEHOLDER;
     use std::os::unix::fs::symlink;
 
     let temp = tempfile::tempdir().unwrap();
