@@ -12,6 +12,7 @@ mod builder;
 mod component_install;
 mod content_service;
 mod context;
+mod diagnostics_service;
 mod install_service;
 mod install_tool_runner;
 mod instance_service;
@@ -34,6 +35,7 @@ pub use content_service::{
     ContentRecognitionOperation, ContentScanOperation, ContentSearchOperation, ContentService,
     ContentUpdatesOperation, ContentVersionOperation, ContentVersionsOperation,
 };
+pub use diagnostics_service::{DiagnosticAnalysisOperation, DiagnosticService};
 pub use install_service::{InstallExecutionOperation, InstallPlanOperation, InstallService};
 pub use instance_service::{
     InstanceCloneOperation, InstanceDeleteOperation, InstanceRepairOperation, InstanceRepository,

@@ -17,6 +17,7 @@ graphene-minecraft.workspace = true
 graphene-instance.workspace = true
 graphene-content.workspace = true
 graphene-java.workspace = true
+graphene-diagnostics.workspace = true
 graphene-modpack.workspace = true
 graphene-providers.workspace = true
 graphene-install.workspace = true

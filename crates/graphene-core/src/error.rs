@@ -153,6 +153,13 @@ pub enum ErrorCode {
     PackExportStale,
     PackEmbeddingDecisionRequired,
     PackOutputExists,
+    DiagnosticRequestInvalid,
+    DiagnosticCollectionFailed,
+    DiagnosticSourceTooLarge,
+    DiagnosticSourceUnsafe,
+    DiagnosticAnalysisFailed,
+    DiagnosticStateChanged,
+    DiagnosticReportInvalid,
     InternalInvariantViolation,
 }
 
@@ -308,6 +315,13 @@ impl ErrorCode {
             Self::PackExportStale => "PACK_EXPORT_STALE",
             Self::PackEmbeddingDecisionRequired => "PACK_EMBEDDING_DECISION_REQUIRED",
             Self::PackOutputExists => "PACK_OUTPUT_EXISTS",
+            Self::DiagnosticRequestInvalid => "DIAGNOSTIC_REQUEST_INVALID",
+            Self::DiagnosticCollectionFailed => "DIAGNOSTIC_COLLECTION_FAILED",
+            Self::DiagnosticSourceTooLarge => "DIAGNOSTIC_SOURCE_TOO_LARGE",
+            Self::DiagnosticSourceUnsafe => "DIAGNOSTIC_SOURCE_UNSAFE",
+            Self::DiagnosticAnalysisFailed => "DIAGNOSTIC_ANALYSIS_FAILED",
+            Self::DiagnosticStateChanged => "DIAGNOSTIC_STATE_CHANGED",
+            Self::DiagnosticReportInvalid => "DIAGNOSTIC_REPORT_INVALID",
             Self::InternalInvariantViolation => "INTERNAL_INVARIANT_VIOLATION",
         }
     }
@@ -339,6 +353,7 @@ pub enum ErrorKind {
     Authentication,
     Content,
     Modpack,
+    Diagnostics,
     Internal,
 }
 

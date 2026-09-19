@@ -124,6 +124,14 @@ distributor; no plaintext fallback is silently enabled.
 Offline launch-plan construction from committed normalized state plus ephemeral session data, and
 the public game-process lifecycle abstraction.
 
+### Diagnostics
+
+Bounded, offline-first, read-only diagnostic normalization and correlation: provider-neutral models,
+bounded text/crash parsing, deterministic secret/path redaction, evidence and confidence
+classification, and non-mutating recommendations that converge on existing instance-repair, Java,
+and content capabilities. This bounded context analyzes normalized snapshots and never becomes a
+second storage, orchestration, or repair layer.
+
 ### Service and root facade
 
 Composition and dependency-inversion adapters. The root `graphene` crate re-exports stable

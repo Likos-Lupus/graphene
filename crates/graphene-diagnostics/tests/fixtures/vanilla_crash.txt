@@ -1,0 +1,5 @@
+---- Minecraft Crash Report ----
+// Ooh. Shiny.
+Description: Rendering screen
+java.lang.NullPointerException: Cannot invoke "Object.toString()" because "x" is null
+	at net.minecraft.client.gui.GuiScreen.render(GuiScreen.java:100)

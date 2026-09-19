@@ -166,7 +166,10 @@ impl JavaService {
         spawn_blocking_java(move || load_inventory(&root)).await
     }
 
-    async fn requirement_for_instance(&self, instance_id: InstanceId) -> Result<JavaRequirement> {
+    pub(crate) async fn requirement_for_instance(
+        &self,
+        instance_id: InstanceId,
+    ) -> Result<JavaRequirement> {
         let repo = crate::instance_service::InstanceRepository::new(self.context.storage.path());
         let receipt = repo.load_receipt(instance_id).map_err(|source| {
             GrapheneError::new(

@@ -1,0 +1,2 @@
+org.spongepowered.asm.mixin.throwables.MixinApplyError: Mixin apply failed example.mixins.json:MixinFoo -> net.minecraft.Foo
+	at org.spongepowered.asm.mixin.transformer.MixinTransformer.applyMixins(MixinTransformer.java:1)

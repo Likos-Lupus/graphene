@@ -24,6 +24,7 @@ PACKAGE_NAMES = [
     "graphene-install",
     "graphene-launch",
     "graphene-service",
+    "graphene-diagnostics",
 ]
 PACKAGES = {
     name: ROOT / ("Cargo.toml" if name == "graphene" else f"crates/{name}/Cargo.toml")
@@ -71,6 +72,25 @@ EXPLICIT_FORBIDDEN = {
     ("graphene-content", "graphene-modpack"),
     ("graphene-instance", "graphene-modpack"),
     ("graphene-launch", "graphene-modpack"),
+    # Diagnostics analyzes normalized snapshots only; it never becomes a storage, orchestration,
+    # network, provider, auth, or host layer.
+    ("graphene-diagnostics", "graphene-service"),
+    ("graphene-diagnostics", "graphene-providers"),
+    ("graphene-diagnostics", "graphene-network"),
+    ("graphene-diagnostics", "graphene-storage"),
+    ("graphene-diagnostics", "graphene-auth"),
+    ("graphene-diagnostics", "graphene-launch"),
+    ("graphene-diagnostics", "graphene-modpack"),
+    ("graphene-diagnostics", "graphene-install"),
+    ("graphene-diagnostics", "graphene-minecraft"),
+    ("graphene-diagnostics", "graphene-platform"),
+    ("graphene-diagnostics", "graphene-java"),
+    # Upstream bounded contexts must not gain a reverse dependency on diagnostics merely to emit
+    # findings; existing low-level diagnostics remain legal inputs to the aggregator.
+    ("graphene-instance", "graphene-diagnostics"),
+    ("graphene-content", "graphene-diagnostics"),
+    ("graphene-java", "graphene-diagnostics"),
+    ("graphene-launch", "graphene-diagnostics"),
 }
 
 MAX_CRATE_ROOT_LINES = 120

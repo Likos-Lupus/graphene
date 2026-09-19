@@ -161,12 +161,37 @@ readable as Vanilla; current receipts persist explicit components.
 Persisted state intentionally excludes raw provider DTOs, secrets, absolute data roots, transient
 staging paths, and unbounded external response data.
 
+## Diagnostic boundary
+
+Local logs, crash reports, `hs_err` files, and instance metadata are untrusted input:
+
+- **Read-only collection**: `DiagnosticService` holds the shared instance lease and inspects only a
+  conservative allowlist (instance metadata/receipt/lockfile/config, `logs/latest.log`,
+  `logs/debug.log`, bounded crash reports, bounded `hs_err_pid*.log`, offline mod inventory, and
+  optional caller exit evidence). It never recursively sweeps `.minecraft`.
+- **Bounded reads**: per-source and aggregate byte ceilings, bounded line length, bounded
+  crash/`hs_err` selection, bounded excerpts, and bounded finding/evidence counts are named constants
+  enforced before allocation.
+- **Path containment**: subjects that are symlinks or non-regular files are rejected, and a
+  subject's canonical parent must remain inside the instance root.
+- **Hostile text**: lossy UTF-8 decoding and panic-free line scanning tolerate CRLF/LF, invalid
+  UTF-8, truncated files, and oversized single lines. Parsing uses substring rules rather than a
+  regex engine, so there is no rule-ReDoS surface.
+- **Redaction before exposure**: known secret values, bearer/authorization tokens, credential
+  key/value forms, URL userinfo/query credentials, and the explicit data root/home prefixes are
+  redacted deterministically and idempotently before excerpts, serialization, or tracing. A
+  redaction failure fails closed. This is secret redaction, not complete personal-data anonymization.
+- **No network, no shell**: diagnostics performs no upload, no shell execution, and no
+  parser-triggered command. Heuristic findings never authorize destructive remediation; every
+  recommendation is non-mutating and must be invoked explicitly through its owning service.
+
 ## Residual risk and validation status
 
-Deterministic tests cover many trust boundaries, but this worktree has not been release-sign-off
-validated with the Rust toolchain or real upstream/runtime smokes because `cargo`/`rustc` are absent
-from the execution environment. Real validation status is recorded only in
-[`VALIDATION.md`](VALIDATION.md); fixture success must not be presented as production smoke success.
+Deterministic tests cover many trust boundaries, and the automated quality gate (formatting,
+workspace check/test/clippy/doc, architecture, and hygiene) passes with a Rust toolchain present.
+Real upstream/runtime smokes have not been release-sign-off validated; real validation status is
+recorded only in [`VALIDATION.md`](VALIDATION.md), and fixture success must not be presented as
+production smoke success.
 
 ## Modpacks
 

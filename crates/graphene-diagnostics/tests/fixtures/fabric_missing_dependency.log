@@ -1,0 +1,3 @@
+[main/ERROR]: Incompatible mod set!
+net.fabricmc.loader.impl.FormattedException: Mod resolution encountered an incompatible mod set!
+ - Mod 'Cool Mod' (coolmod) 1.2.0 requires any version of fabric-api, which is missing!

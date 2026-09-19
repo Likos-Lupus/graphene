@@ -292,6 +292,34 @@ and `GameExit` are Graphene-owned lifecycle abstractions; underlying Tokio child
 private. Stdout/stderr are drained with bounded host-facing behavior so a slow consumer cannot
 indefinitely block child pipes.
 
+## Diagnostics
+
+`Graphene::diagnostics()` returns `DiagnosticService`, a bounded, offline-first, read-only analysis
+workflow. `analyze(instance_id, DiagnosticRequest)` returns a `DiagnosticAnalysisOperation` exposing
+`operation()` (progress/cancellation) and `await_result() -> Result<DiagnosticReport>`.
+
+`DiagnosticRequest` selects a `DiagnosticMode` (`Preflight`, `Crash`, `Full`), a
+`DiagnosticVerificationPolicy` (`Quick`, `Full`, `Skip`), a bounded `DiagnosticSourcePolicy`, and
+optional `ProcessExitEvidence`. Source-policy ceilings may be lowered but never raised above the
+crate hard limits; exactly one `OperationHandle` covers collection and analysis.
+
+`DiagnosticReport` carries the instance id, base `InstanceStateFingerprint`, optional
+`ContentInventoryFingerprint`, `findings`, `recommendations`, bounded `evidence`, `sources`, an
+explicit `DiagnosticCompleteness` (`Complete`, `Partial`, `Stale`), and truncation counters. Each
+`DiagnosticFinding` contains a core `Diagnostic` (stable code + severity + structured parameters), a
+`Confidence` (`Heuristic`, `Strong`, `Confirmed`), and evidence references; findings never claim
+more certainty than their evidence supports.
+
+`DiagnosticRecommendation` pairs a stable code with a non-mutating `RecommendationActionKind` such as
+`PlanInstanceRepair`, `SelectCompatibleJava`, `InstallManagedJava`, `ReviewContentConflict`,
+`ReviewMissingContentDependency`, `ReviewMemoryConfiguration`, `CollectAdditionalEvidence`, or
+`NoAutomaticRemediation`. A recommendation is not permission: the caller must explicitly invoke the
+owning service. Managed corruption converges on `InstanceService::plan_repair`/`execute_repair`,
+Java remediation on `JavaService`, and content changes on an explicit `ContentMutationRequest`/plan.
+Unknown causes remain a first-class result (`DIAGNOSTIC_CAUSE_UNDETERMINED`) rather than a
+fabricated blame assignment. Evidence excerpts are redacted before they enter the report, and
+diagnosis performs no network upload and no hidden mutation.
+
 ## API stability direction
 
 The public contract is Graphene-owned types and capability services. Provider protocols, exact crate

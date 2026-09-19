@@ -1,0 +1,3 @@
+[Render thread/ERROR] [net.minecraftforge.fml/]: Failed to load mod: examplemod
+java.lang.NoClassDefFoundError: com/example/Dep
+	at com.example.ExampleMod.<init>(ExampleMod.java:20)
