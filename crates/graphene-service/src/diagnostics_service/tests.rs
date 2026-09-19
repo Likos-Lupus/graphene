@@ -1,8 +1,6 @@
 use super::collection;
 use graphene_core::{CancellationToken, ErrorCode, InstanceId};
-use graphene_diagnostics::{
-    DiagnosticCompleteness, DiagnosticSourcePolicy, EvidenceSourceKind,
-};
+use graphene_diagnostics::{DiagnosticCompleteness, DiagnosticSourcePolicy, EvidenceSourceKind};
 use graphene_storage::InstancePaths;
 use std::fs;
 
