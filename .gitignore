@@ -6,3 +6,7 @@
 /apps/**/node_modules
 /apps/graphene-tauri/dist
 /apps/graphene-tauri/src-tauri/gen
+
+# Python bytecode caches
+__pycache__/
+*.pyc

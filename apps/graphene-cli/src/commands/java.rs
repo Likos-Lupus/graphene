@@ -7,9 +7,9 @@ use graphene::{GrapheneError, JavaRequirement};
 pub async fn dispatch(context: &AppContext, args: JavaArgs) -> Result<Rendered, GrapheneError> {
     match args.command {
         JavaCommand::List => list(context).await,
-        
+
         JavaCommand::Ensure { instance_id } => ensure(context, &instance_id).await,
-        
+
         JavaCommand::Install { major } => install(context, major).await,
     }
 }
@@ -29,7 +29,7 @@ async fn list(context: &AppContext) -> Result<Rendered, GrapheneError> {
             )
         })
         .collect();
-    
+
     Ok(Rendered::new(human, Rendered::value(&runtimes)))
 }
 
@@ -44,7 +44,7 @@ async fn ensure(context: &AppContext, instance_id: &str) -> Result<Rendered, Gra
         format!("version: {}", runtime.version),
         format!("executable: {}", runtime.executable.display()),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&runtime)))
 }
 
@@ -61,6 +61,6 @@ async fn install(context: &AppContext, major: u32) -> Result<Rendered, GrapheneE
         format!("major: {}", runtime.major_version),
         format!("version: {}", runtime.version),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&runtime)))
 }

@@ -26,11 +26,11 @@ pub(crate) fn register_synthetic(state: &TauriAppState, steps: u64, delay_ms: u6
             .synthetic(None, steps, Duration::from_millis(delay_ms));
     let handle = operation.operation();
     let id = state.operations().register(handle);
-    
+
     tauri::async_runtime::spawn(async move {
         let _ = operation.await_result().await;
     });
-    
+
     id
 }
 
@@ -48,7 +48,7 @@ pub async fn engine_start_synthetic(
 ) -> Result<OperationHandleView, HostError> {
     let id = register_synthetic(state.inner(), steps, delay_ms);
     events::forward_operation(app, Arc::clone(state.operations()), id);
-    
+
     Ok(OperationHandleView {
         operation_id: id.to_string(),
     })

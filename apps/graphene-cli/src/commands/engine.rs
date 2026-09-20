@@ -23,7 +23,7 @@ fn info(context: &AppContext) -> Rendered {
         format!("os: {os}"),
         format!("architecture: {architecture}"),
     ];
-    
+
     Rendered::new(
         human,
         json!({
@@ -61,6 +61,6 @@ async fn synthetic(
         "synthetic operation completed ({} events)",
         events.len()
     )];
-    
+
     Ok(Rendered::new(human, json!({ "events": events })))
 }

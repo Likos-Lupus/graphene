@@ -34,7 +34,7 @@ pub(crate) async fn verify(
     } else {
         VerificationMode::Quick
     };
-    
+
     let operation = state
         .engine()
         .instances()
@@ -54,7 +54,7 @@ pub(crate) async fn plan_repair(
             VerificationMode::Quick
         },
     };
-    
+
     state
         .engine()
         .instances()

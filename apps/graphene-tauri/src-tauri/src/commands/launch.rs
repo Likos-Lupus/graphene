@@ -29,9 +29,9 @@ pub(crate) async fn run(
     let game = state.engine().launch().execute(plan)?;
     let pid = game.pid();
     let run_id = state.runs().insert(Arc::new(game));
-    
+
     events::forward_run(app.clone(), Arc::clone(state.runs()), run_id.clone());
-    
+
     Ok(RunHandleView { run_id, pid })
 }
 
@@ -98,7 +98,7 @@ pub async fn launch_kill_pid(pid: u32) -> Result<(), HostError> {
             Err(HostError::invalid("pid", &pid.to_string()))
         }
     }
-    
+
     #[cfg(not(unix))]
     {
         let _ = pid;

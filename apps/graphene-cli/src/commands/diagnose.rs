@@ -21,7 +21,7 @@ fn build_request(mode: DiagnosticModeArg, exit_code: Option<i32>) -> DiagnosticR
         DiagnosticModeArg::Crash => DiagnosticRequest::crash(),
         DiagnosticModeArg::Full => DiagnosticRequest::full(),
     };
-    
+
     match exit_code {
         Some(code) => {
             request.with_process_exit(ProcessExitEvidence::new(Some(code), code == 0, false))
@@ -37,7 +37,7 @@ fn report_human(report: &DiagnosticReport) -> Vec<String> {
         format!("findings: {}", report.findings.len()),
         format!("recommendations: {}", report.recommendations.len()),
     ];
-    
+
     for finding in &report.findings {
         lines.push(format!(
             "  [{:?}] {} ({:?}, {:?})",
@@ -47,7 +47,7 @@ fn report_human(report: &DiagnosticReport) -> Vec<String> {
             finding.confidence,
         ));
     }
-    
+
     for recommendation in &report.recommendations {
         lines.push(format!(
             "  -> {} : {:?}",
@@ -55,6 +55,6 @@ fn report_human(report: &DiagnosticReport) -> Vec<String> {
             recommendation.action
         ));
     }
-    
+
     lines
 }

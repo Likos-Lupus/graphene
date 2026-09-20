@@ -14,7 +14,7 @@ pub async fn dispatch(context: &AppContext, args: ContentArgs) -> Result<Rendere
             instance_id,
             hashes,
         } => scan(context, &instance_id, hashes).await,
-        
+
         ContentCommand::Search {
             provider,
             query,
@@ -22,9 +22,9 @@ pub async fn dispatch(context: &AppContext, args: ContentArgs) -> Result<Rendere
             loader,
             limit,
         } => search(context, provider, &query, minecraft, loader, limit).await,
-        
+
         ContentCommand::Recognize { instance_id } => recognize(context, &instance_id).await,
-        
+
         ContentCommand::Install {
             instance_id,
             provider,
@@ -32,7 +32,7 @@ pub async fn dispatch(context: &AppContext, args: ContentArgs) -> Result<Rendere
             version,
             execute,
         } => install(context, &instance_id, provider, &project, &version, execute).await,
-        
+
         ContentCommand::Update {
             instance_id,
             execute,
@@ -126,7 +126,7 @@ async fn install(
     let handle = operation.operation();
     let result =
         await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
-    
+
     Ok(execution_rendered(&result))
 }
 
@@ -154,7 +154,7 @@ async fn update(
     let handle = operation.operation();
     let result =
         await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
-    
+
     Ok(execution_rendered(&result))
 }
 
@@ -171,7 +171,7 @@ fn execution_rendered(result: &graphene::ContentMutationResult) -> Rendered {
             .collect::<Vec<_>>(),
         "committed_fingerprint": result.committed_fingerprint.to_string(),
     });
-    
+
     Rendered::new(human, json)
 }
 

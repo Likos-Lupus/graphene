@@ -88,7 +88,7 @@ impl AuthInteractionView {
                 expires_in_seconds: *expires_in_seconds,
                 poll_interval_seconds: *poll_interval_seconds,
             },
-            
+
             _ => Self {
                 operation_id,
                 kind: "unknown".to_owned(),

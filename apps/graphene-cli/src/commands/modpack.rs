@@ -12,13 +12,13 @@ use std::path::PathBuf;
 pub async fn dispatch(context: &AppContext, args: ModpackArgs) -> Result<Rendered, GrapheneError> {
     match args.command {
         ModpackCommand::Inspect { source } => inspect(context, &source).await,
-        
+
         ModpackCommand::Import {
             source,
             name,
             execute,
         } => import(context, &source, &name, execute).await,
-        
+
         ModpackCommand::Export {
             instance_id,
             name,
@@ -49,7 +49,7 @@ async fn inspect(context: &AppContext, source: &str) -> Result<Rendered, Graphen
             value["requires_provider_resolution"]
         ),
     ];
-    
+
     Ok(Rendered::new(human, value))
 }
 
@@ -96,7 +96,7 @@ async fn import(
         format!("name: {}", committed.descriptor.display_name),
         format!("minecraft: {}", committed.receipt.requested_version),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&committed)))
 }
 
@@ -132,7 +132,7 @@ async fn export(
             result.referenced_managed_files
         ),
     ];
-    
+
     Ok(Rendered::new(
         human,
         json!({

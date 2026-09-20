@@ -19,7 +19,7 @@ pub fn main_entry() {
             exit_code(&error)
         }
     };
-    
+
     std::process::exit(exit);
 }
 
@@ -37,7 +37,7 @@ fn run(cli: Cli, mode: OutputMode) -> Result<(), GrapheneError> {
             )
             .with_source(source)
         })?;
-    
+
     runtime.block_on(dispatch(cli, mode))
 }
 

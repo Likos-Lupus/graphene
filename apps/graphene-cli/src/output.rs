@@ -63,7 +63,7 @@ pub fn print_error(mode: OutputMode, body: &crate::error::ErrorBody) {
                 eprintln!("  {key}: {value}");
             }
         }
-        
+
         OutputMode::Json => {
             let envelope = serde_json::json!({ "ok": false, "error": body });
             eprintln!("{}", pretty(&envelope));

@@ -56,7 +56,7 @@ def frontend_sources() -> list[pathlib.Path]:
     if not root.exists():
         return []
     return sorted(
-        path for path in root.rglob("*.ts") if not _excluded(path, root),
+        path for path in root.rglob("*.ts") if not _excluded(path, root)
     )
 
 

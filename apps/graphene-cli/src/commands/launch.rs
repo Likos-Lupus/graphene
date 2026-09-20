@@ -17,12 +17,12 @@ pub async fn dispatch(context: &AppContext, args: LaunchArgs) -> Result<Rendered
             instance_id,
             account,
         } => plan(context, &instance_id, account.as_deref()).await,
-        
+
         LaunchCommand::Run {
             instance_id,
             account,
         } => run(context, &instance_id, account.as_deref()).await,
-        
+
         LaunchCommand::Kill { pid } => kill(pid),
     }
 }
@@ -75,7 +75,7 @@ async fn run(
         format!("exit_code: {:?}", exit.code),
         format!("killed: {}", exit.killed),
     ];
-    
+
     Ok(Rendered::new(
         human,
         json!({ "success": exit.success, "exit_code": exit.code, "killed": exit.killed }),
@@ -116,7 +116,7 @@ fn redacted(context: &AppContext, plan: &LaunchPlan) -> Rendered {
         format!("jvm_args: {}", snapshot.jvm_args.len()),
         format!("game_args: {}", snapshot.game_args.len()),
     ];
-    
+
     Rendered::new(human, Rendered::value(&snapshot))
 }
 
@@ -128,7 +128,7 @@ fn render_game_event(context: &AppContext, event: &GameEvent) {
         );
         return;
     }
-    
+
     match event {
         GameEvent::Started { pid } => eprintln!("game started (pid {pid})"),
         GameEvent::Stdout { text, .. } => print!("{text}"),
@@ -176,7 +176,7 @@ fn kill(pid: u32) -> Result<Rendered, GrapheneError> {
             .with_context("pid", pid.to_string()))
         }
     }
-    
+
     #[cfg(not(unix))]
     {
         let _ = pid;

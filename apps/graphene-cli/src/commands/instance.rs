@@ -8,21 +8,21 @@ use serde_json::Value;
 pub async fn dispatch(context: &AppContext, args: InstanceArgs) -> Result<Rendered, GrapheneError> {
     match args.command {
         InstanceCommand::List => list(context).await,
-        
+
         InstanceCommand::Get { instance_id } => get(context, &instance_id).await,
-        
+
         InstanceCommand::Verify { instance_id, full } => verify(context, &instance_id, full).await,
-        
+
         InstanceCommand::Repair {
             instance_id,
             execute,
             full,
         } => repair(context, &instance_id, execute, full).await,
-        
+
         InstanceCommand::Clone { instance_id, name } => clone(context, &instance_id, &name).await,
-        
+
         InstanceCommand::Delete { instance_id } => delete(context, &instance_id).await,
-        
+
         InstanceCommand::Config(args) => config(context, args).await,
     }
 }
@@ -41,7 +41,7 @@ async fn list(context: &AppContext) -> Result<Rendered, GrapheneError> {
             )
         })
         .collect();
-    
+
     Ok(Rendered::new(human, Rendered::value(&entries)))
 }
 
@@ -55,7 +55,7 @@ async fn get(context: &AppContext, instance_id: &str) -> Result<Rendered, Graphe
         format!("minecraft: {}", committed.receipt.requested_version),
         format!("main_class: {}", committed.receipt.main_class),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&committed)))
 }
 
@@ -79,7 +79,7 @@ async fn verify(
         format!("repairability: {:?}", report.repairability),
         format!("summary: {}", report.summary),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&report)))
 }
 
@@ -98,7 +98,7 @@ async fn repair(
         },
     };
     let plan = context.engine.instances().plan_repair(id, options).await?;
-    
+
     if !execute {
         let human = vec![
             format!("noop: {}", plan.is_noop()),
@@ -117,7 +117,7 @@ async fn repair(
         format!("executed_actions: {}", result.executed_actions_count),
         format!("healthy: {}", result.post_verify_report.is_healthy()),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&result)))
 }
 
@@ -130,7 +130,7 @@ async fn clone(
     let request = CloneRequest::new(name)?;
     let operation = context.engine.instances().clone(id, request);
     let handle = operation.operation();
-    
+
     await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
     Ok(Rendered::new(
         vec![format!("cloned {instance_id} to new instance '{name}'")],
@@ -142,7 +142,7 @@ async fn delete(context: &AppContext, instance_id: &str) -> Result<Rendered, Gra
     let id = parse_instance(instance_id)?;
     let operation = context.engine.instances().delete(id, DeleteOptions {});
     let handle = operation.operation();
-    
+
     await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
     Ok(Rendered::new(
         vec![format!("deleted instance {instance_id}")],
@@ -157,7 +157,7 @@ async fn config(context: &AppContext, args: InstanceConfigArgs) -> Result<Render
             let value = Rendered::value(&global);
             Ok(Rendered::new(pretty_lines(&value), value))
         }
-        
+
         InstanceConfigCommand::Effective { instance_id } => {
             let id = parse_instance(&instance_id)?;
             let effective = context.engine.instances().effective_config(id).await?;

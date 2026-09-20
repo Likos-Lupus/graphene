@@ -57,7 +57,7 @@ async fn finish_login(
     operation: MicrosoftLoginOperation,
 ) -> Result<Rendered, GrapheneError> {
     crate::interaction::emit(context.output, operation.interaction());
-    
+
     let handle = operation.operation();
     let account =
         await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
@@ -66,7 +66,7 @@ async fn finish_login(
         format!("display_name: {}", account.profile.display_name),
         format!("state: {:?}", account.state),
     ];
-    
+
     Ok(Rendered::new(human, Rendered::value(&account)))
 }
 
