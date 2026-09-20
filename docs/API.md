@@ -310,7 +310,8 @@ explicit `DiagnosticCompleteness` (`Complete`, `Partial`, `Stale`), and truncati
 `Confidence` (`Heuristic`, `Strong`, `Confirmed`), and evidence references; findings never claim
 more certainty than their evidence supports.
 
-`DiagnosticRecommendation` pairs a stable code with a non-mutating `RecommendationActionKind` such as
+`DiagnosticRecommendation` pairs a stable code with a non-mutating `RecommendationActionKind` such
+as
 `PlanInstanceRepair`, `SelectCompatibleJava`, `InstallManagedJava`, `ReviewContentConflict`,
 `ReviewMissingContentDependency`, `ReviewMemoryConfiguration`, `CollectAdditionalEvidence`, or
 `NoAutomaticRemediation`. A recommendation is not permission: the caller must explicitly invoke the
@@ -346,6 +347,13 @@ instances are ordinary Graphene desired state.
 Every operation is an operation object exposing `operation()` (handle for progress/cancellation)
 and `await_result()`.
 
+The root `graphene` facade re-exports the modpack request/plan/result types (`ModpackImportRequest`,
+`ModpackImportPlan`, `ModpackExportRequest`, `ModpackExportPlan`,
+`ModpackExportResult`, `ExportEmbeddingPolicy`) so reference hosts can drive these workflows through
+`Graphene::modpacks()` without reaching into `graphene-service`. This is the only engine API
+addition discovered by Phase 8 host integration; it is host-neutral and equally useful from every
+consumer.
+
 ### Key types
 
 - `PackSource` — local file or HTTPS URL import source; both become observed SHA-256/SHA-512
@@ -377,3 +385,13 @@ and `await_result()`.
 rewrite; content mutations preserve the origin. Pack-managed artifacts are ordinary
 `LockedArtifact` entries and mods are ordinary `LockedContentEntry` entries, so verify/repair need
 no format branches.
+
+## Reference hosts
+
+The reference CLI (`apps/graphene-cli`) and Tauri host (`apps/graphene-tauri`) are outward consumers
+of the root `graphene` facade. They are not part of the engine's public API: host wire/JSON DTOs are
+app-local compatibility contracts, and no host framework type enters `graphene` or its bounded
+contexts. Hosts own data-root resolution, secure credential storage, tracing initialization, and
+operation/run registries; all Minecraft, provider, install, content, modpack, diagnostic, and launch
+logic stays in the engine.
+

@@ -132,6 +132,15 @@ classification, and non-mutating recommendations that converge on existing insta
 and content capabilities. This bounded context analyzes normalized snapshots and never becomes a
 second storage, orchestration, or repair layer.
 
+### Host integration
+
+Reference hosts live outside the engine in a separate `apps/` workspace: a reference CLI, a Tauri
+reference host, and shared host-only support (data-root/config resolution, a production OS
+credential-vault `SecretStore` adapter, tracing initialization, and operation/run bridging
+registries). Hosts consume only the root `graphene` facade, own presentation and process lifecycle,
+and contain no Minecraft/provider/install/content/modpack/diagnostic/launch logic. Host framework
+types and wire DTOs never enter the engine.
+
 ### Service and root facade
 
 Composition and dependency-inversion adapters. The root `graphene` crate re-exports stable

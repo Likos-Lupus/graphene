@@ -1,2 +1,8 @@
 /target
 /.idea
+
+# Reference host workspace
+/apps/target
+/apps/**/node_modules
+/apps/graphene-tauri/dist
+/apps/graphene-tauri/src-tauri/gen

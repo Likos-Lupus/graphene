@@ -1,0 +1,39 @@
+# Reference host workspace.
+#
+# Hosts are outward consumers of the root `graphene` facade. They intentionally live in a separate
+# Cargo workspace so that Tauri/system-graphics dependencies never enter the engine workspace gates
+# or its cross-platform CI matrix. See docs/ARCHITECTURE.md ("Reference host packages").
+[workspace]
+members = ["graphene-reference-host-support",
+    "graphene-cli",
+    "graphene-tauri/src-tauri",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-3"
+rust-version = "1.97.1"
+
+[workspace.dependencies]
+graphene = { path = "..", version = "0.1.0" }
+graphene-reference-host-support = { path = "graphene-reference-host-support", version = "0.1.0" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread",
+    "macros",
+    "sync",
+    "time",
+    "signal",
+    "io-util",
+] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+clap = { version = "4", features = ["derive"] }
+keyring = "4"
+libc = "0.2"
+tauri = { version = "2" }
+tauri-build = { version = "2" }
+tempfile = "3"

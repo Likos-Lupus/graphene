@@ -1,0 +1,32 @@
+[package]
+name = "graphene-tauri-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Reference Tauri host consuming only the root graphene facade."
+
+[lib]
+name = "graphene_tauri_host"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "graphene-tauri-host"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+graphene.workspace = true
+graphene-reference-host-support.workspace = true
+keyring.workspace = true
+libc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

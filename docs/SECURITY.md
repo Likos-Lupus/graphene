@@ -169,8 +169,8 @@ Local logs, crash reports, `hs_err` files, and instance metadata are untrusted i
   conservative allowlist (instance metadata/receipt/lockfile/config, `logs/latest.log`,
   `logs/debug.log`, bounded crash reports, bounded `hs_err_pid*.log`, offline mod inventory, and
   optional caller exit evidence). It never recursively sweeps `.minecraft`.
-- **Bounded reads**: per-source and aggregate byte ceilings, bounded line length, bounded
-  crash/`hs_err` selection, bounded excerpts, and bounded finding/evidence counts are named constants
+- **Bounded reads**: per-source and aggregate byte ceilings, bounded line length, bounded crash/
+  `hs_err` selection, bounded excerpts, and bounded finding/evidence counts are named constants
   enforced before allocation.
 - **Path containment**: subjects that are symlinks or non-regular files are rejected, and a
   subject's canonical parent must remain inside the instance root.
@@ -180,7 +180,8 @@ Local logs, crash reports, `hs_err` files, and instance metadata are untrusted i
 - **Redaction before exposure**: known secret values, bearer/authorization tokens, credential
   key/value forms, URL userinfo/query credentials, and the explicit data root/home prefixes are
   redacted deterministically and idempotently before excerpts, serialization, or tracing. A
-  redaction failure fails closed. This is secret redaction, not complete personal-data anonymization.
+  redaction failure fails closed. This is secret redaction, not complete personal-data
+  anonymization.
 - **No network, no shell**: diagnostics performs no upload, no shell execution, and no
   parser-triggered command. Heuristic findings never authorize destructive remediation; every
   recommendation is non-mutating and must be invoked explicitly through its owning service.
@@ -208,3 +209,26 @@ requires an explicit host embedding decision per destination, persists provenanc
 provider references rather than raw URLs where available, and publishes create-only after
 re-validating the archive against the import contract. Residual risk: real-world interop smokes
 remain NOT RUN (see VALIDATION.md).
+
+## Reference host boundary
+
+Reference hosts (`apps/`) consume only the root `graphene` facade. Two host trust boundaries are
+introduced:
+
+- **OS credential vault.** The reference secure-store adapter implements Graphene's existing
+  `SecretStore` contract using the platform credential vault (macOS Keychain, Windows Credential
+  Manager, Secret Service on non-macOS `*nix`) under the stable `SecretRecordIdentity::key()`
+  namespace. There is no plaintext fallback: if the backend is unavailable, reads/writes fail
+  explicitly, and offline-account workflows continue without it. Vault calls run through the
+  engine's existing blocking-boundary secret paths, never on an async I/O worker. The adapter is
+  host-owned; no OS-credential API enters `graphene-auth`.
+- **Tauri IPC.** Tauri commands return app-local wire DTOs and a safe error envelope; refresh/access
+  tokens, `LaunchSession`, and `RefreshCredential` values are never serialized to the webview. The
+  only authentication material crossing IPC is the intended device-authorization display pair
+  (verification URI + user code). Internal source errors, absolute secret paths, and implementation
+  handles are omitted. Frontend logs never receive engine secret values, and diagnostic excerpts are
+  already redacted by the engine before a host displays them.
+
+Host shutdown terminates tracked games explicitly so an instance shared lease is never dropped while
+a child process is alive. Residual risk: real OS-vault and packaged-desktop-host smokes remain NOT
+RUN (see VALIDATION.md).

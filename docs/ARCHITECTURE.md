@@ -205,17 +205,47 @@ pipeline; recommendations converge on existing verify/repair, Java, and content 
 APIs. `scripts/check_architecture.py` treats `graphene-diagnostics` as an engine crate and encodes
 these forbidden edges.
 
+## Reference host packages
+
+Reference hosts are outward consumers of the root `graphene` facade, not part of the engine. They
+live in a separate Cargo workspace under `apps/` so that Tauri/graphics system dependencies never
+enter the engine workspace gates or its cross-platform CI matrix:
+
+```text
+apps/
+  graphene-reference-host-support/   # host-only config, secure-store, tracing, operation/run bridges
+  graphene-cli/                      # reference CLI
+  graphene-tauri/                    # Vite/TypeScript frontend + src-tauri (graphene-tauri-host)
+```
+
+Durable rules:
+
+- no engine package depends on a host package;
+- host packages depend on the root `graphene` facade, never on internal engine crates;
+- `tauri` is permitted only in `graphene-tauri-host`; `slint` is never permitted;
+- provider DTOs and Reqwest do not migrate into hosts;
+- host wire/JSON DTOs are app-local compatibility contracts and are never added to `graphene-core`;
+- hosts never execute Java/Minecraft through shell strings and never call provider HTTP endpoints
+  directly;
+- host entry points (`lib.rs`, `main.rs`, Tauri command modules) remain thin and bounded so they do
+  not become god files.
+
+`scripts/check_architecture.py` distinguishes engine packages from host packages and enforces these
+rules without weakening the engine UI-dependency ban. `scripts/check_hygiene.py` applies the
+production-size and phase-naming rules to host Rust and TypeScript sources as well.
+
 ## Architecture checks
 
 `scripts/check_architecture.py` should fail for durable violations such as:
 
 - forbidden internal dependency edges or cycles;
-- UI dependencies inside the engine;
-- Reqwest escaping the network boundary;
+- UI dependencies inside the engine, or Tauri outside the designated host;
+- engine packages depending on host packages, or hosts reaching around the facade;
+- Reqwest escaping the network boundary into engine or host packages;
 - public/provider DTO leakage;
-- shell execution patterns in protected domain/install code;
+- shell execution patterns in protected domain/install/host code;
 - duplicated bounded archive codecs;
-- missing/thick/business-logic crate roots.
+- missing/thick/business-logic crate roots or host entry points.
 
 It must not fail because a legitimate refactor removes a dependency, module, or file. Repository
 hygiene conventions are checked separately by `scripts/check_hygiene.py`.
