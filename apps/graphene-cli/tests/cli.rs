@@ -113,7 +113,9 @@ fn invalid_instance_id_returns_safe_error_envelope() {
 #[cfg(unix)]
 #[test]
 fn interrupt_cancels_active_operation_with_exit_130() {
+    use std::io::{BufRead, BufReader};
     use std::process::Stdio;
+    use std::sync::mpsc;
     use std::time::Duration;
 
     let root = tempfile::tempdir().expect("root");
@@ -127,17 +129,33 @@ fn interrupt_cancels_active_operation_with_exit_130() {
             "20",
         ])
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
         .expect("spawn cli");
 
-    std::thread::sleep(Duration::from_millis(400));
+    // Wait until the operation is actually running so the interrupt is handled cooperatively
+    // instead of racing process startup on a slow CI runner.
+    let stderr = child.stderr.take().expect("stderr piped");
+    let (started_tx, started_rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut announced = false;
+        for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+            if !announced && (line.contains("stage:") || line.contains("state:")) {
+                announced = true;
+                let _ = started_tx.send(());
+            }
+        }
+    });
+    started_rx
+        .recv_timeout(Duration::from_secs(120))
+        .expect("operation started before interrupt");
+
     // SAFETY: the child pid is valid for the lifetime of this test.
     let signal = unsafe { libc::kill(child.id() as i32, libc::SIGINT) };
     assert_eq!(signal, 0, "SIGINT delivered");
 
     let mut status = None;
-    for _ in 0..200 {
+    for _ in 0..600 {
         if let Some(current) = child.try_wait().expect("try_wait") {
             status = Some(current);
             break;

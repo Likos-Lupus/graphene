@@ -152,8 +152,22 @@ async fn two_hosts_use_independent_data_roots_without_a_global_singleton() {
     let second = build_graphene(second_root.path()).await;
 
     assert_ne!(first.data_root(), second.data_root());
-    assert_eq!(first.data_root(), first_root.path());
-    assert_eq!(second.data_root(), second_root.path());
+    // The engine canonicalizes the resolved data root, so compare against the canonical temp path
+    // (macOS temp directories resolve through the `/private` symlink).
+    assert_eq!(
+        first.data_root(),
+        first_root
+            .path()
+            .canonicalize()
+            .expect("first canonical root")
+    );
+    assert_eq!(
+        second.data_root(),
+        second_root
+            .path()
+            .canonicalize()
+            .expect("second canonical root")
+    );
 }
 
 #[tokio::test]
