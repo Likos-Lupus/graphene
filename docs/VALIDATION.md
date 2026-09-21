@@ -33,11 +33,43 @@ python scripts/check_hygiene.py
 Do not convert a `NOT RUN` into PASS based on source inspection. Normal automated tests must use
 local deterministic fixtures rather than public-internet availability.
 
+## Reference host gate
+
+The reference hosts live in a separate `apps/` Cargo workspace. On Linux the Tauri host needs the
+system webkit/GTK development packages and the frontend must be built before any host Cargo command
+because the Tauri context embeds `apps/graphene-tauri/dist`:
+
+```bash
+cd apps
+cargo fmt --all -- --check
+cargo check --workspace --all-targets
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo doc --workspace --no-deps
+cd graphene-tauri
+npm ci
+npm run build
+npm test
+```
+
+### Current reference-host status
+
+| Gate                                           | Status | Evidence/reason                                                    |
+|------------------------------------------------|--------|--------------------------------------------------------------------|
+| `apps` `cargo fmt --check`                     | PASS   | Clean formatting across the host workspace.                        |
+| `apps` `cargo check --workspace --all-targets` | PASS   | Support, CLI, and Tauri adapter compile.                           |
+| `apps` `cargo test --workspace`                | PASS   | 24 deterministic host tests (7 CLI, 1 parity, 9 support, 7 Tauri). |
+| `apps` `cargo clippy ... -D warnings`          | PASS   | 0 warnings across the host workspace.                              |
+| `apps` `cargo doc --workspace --no-deps`       | PASS   | Clean host rustdoc generation.                                     |
+| Frontend `npm run build` (tsc + vite)          | PASS   | Type-checks and builds the minimal Vite/TypeScript shell.          |
+| Frontend `npm test` (vitest)                   | PASS   | 10 deterministic mocked-IPC/presentation tests.                    |
+
 ## Vanilla real smoke
 
-**Status: NOT RUN.** The prior delivery could not build/run the engine in its sandbox, and this
-cleanup environment likewise has no Rust toolchain. No deterministic fixture is substituted for a
-real smoke.
+**Status: NOT RUN.** Real smokes require public provider/runtime access and, for authenticated
+paths, real account and vault prerequisites; those are not available in this environment. The engine
+and reference hosts build and all automated gates pass, but no deterministic fixture is substituted
+for a real smoke.
 
 Procedure:
 
@@ -224,13 +256,51 @@ state. A fake-Java process fixture is acceptable for launcher-side coverage but 
 for a real Minecraft runtime smoke.
 
 Deterministic offline coverage: `graphene-diagnostics` unit/integration tests (models, redaction,
-parser fixtures, verification/Java/content correlation), `crates/graphene-service/src/diagnostics_service/tests.rs`
+parser fixtures, verification/Java/content correlation),
+`crates/graphene-service/src/diagnostics_service/tests.rs`
 (collection bounds, symlink escape, cancellation, non-regular files), and root
 `tests/diagnostics_lifecycle.rs` (healthy/legacy, crash + non-zero exit, undetermined cause,
 determinism, read-only, redaction, stale-plan protection).
 
 **Status: NOT RUN** for the real fake-Java launch smoke. Prerequisites: a real Java runtime and a
 pinned Minecraft/loader instance built by the engine.
+
+## CLI Vanilla/loader lifecycle smoke
+
+Procedure: build the real `graphene-cli`, use production provider defaults, create an offline (or
+provided) account, `install vanilla`/`install loader` a pinned supported runtime, `launch plan` a
+redacted plan, `launch run`, observe bounded output, and terminate (Ctrl+C or `launch kill --pid`).
+
+**Status: NOT RUN.** Prerequisites: public network access, a compatible Java runtime, and a pinned
+Minecraft/loader version.
+
+## CLI Microsoft + secure vault smoke
+
+Procedure: on a supported desktop OS, configure a distributor Microsoft application plus the
+reference OS credential vault, then `account microsoft-login`, restart, `account list` (state must
+survive), launch to force refresh, and `account remove`; confirm the vault entry is created,
+refreshed, and deleted with no credential leakage in stdout/stderr/`--json`/tracing.
+
+**Status: NOT RUN.** Prerequisites: a production OS vault, Microsoft app registration, and a test
+account owning Java Edition.
+
+## Tauri adapter smoke
+
+Procedure: build/package the reference desktop host and exercise engine status, instance inventory,
+one cancellable operation, launch lifecycle, and diagnostics through IPC/events with a bounded
+frontend. A successful command unit test is not a packaged-desktop smoke.
+
+**Status: NOT RUN.** Prerequisites: a packaged desktop build on a supported OS.
+
+## Host parity smoke
+
+Procedure: point the CLI and Tauri host at separate equivalent test roots and prove the same engine
+operations produce semantically equivalent normalized outcomes (ids/codes/state/outcome), despite
+different presentation. Automated deterministic coverage lives in
+`apps/graphene-cli/tests/parity.rs` and the Tauri adapter unit tests; a real-host parity run
+remains:
+
+**Status: NOT RUN.** Prerequisites: both reference hosts built against live providers.
 
 ## Recording rule
 

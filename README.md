@@ -32,3 +32,21 @@ and real-world validation evidence is tracked in [`docs/VALIDATION.md`](docs/VAL
 The root `graphene` crate is the consumer-facing facade. Provider DTOs, Reqwest responses, archive
 codec internals, filesystem publication primitives, and Tokio child handles are implementation
 details behind bounded-context crates.
+
+## Reference hosts
+
+`apps/` is a separate Cargo workspace containing two reference consumers of the root `graphene`
+facade, plus shared host-only support:
+
+- `apps/graphene-cli` — reference CLI covering every major service family with human and stable
+  `--json` output modes.
+- `apps/graphene-tauri` — Vite/TypeScript frontend plus a `src-tauri` Rust adapter that consumes
+  Graphene over Tauri IPC and typed events.
+- `apps/graphene-reference-host-support` — host-only data-root/config resolution, a production OS
+  credential-vault `SecretStore` adapter, tracing initialization, and operation/run bridging
+  registries.
+
+Hosts are outward consumers: they never contain Minecraft/provider/install/content/modpack/
+diagnostic/launch logic, and no host framework type enters the engine. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/SECURITY.md`](docs/SECURITY.md) for the
+host dependency direction and trust boundaries.

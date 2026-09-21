@@ -85,6 +85,12 @@ When a file is large mainly because of tests, move substantial tests adjacent fi
 remaining production responsibility. Roughly 100–150 test lines, or a test block that dominates the
 source file, is a useful trigger rather than a hard threshold.
 
+Reference host packages (`apps/`) follow the same cohesion rules with tighter entry-point bounds:
+host `lib.rs` roots stay thin (≤ 120 lines, no business items) and `main.rs` roots stay ≤ 60 lines,
+so `main.rs` and Tauri command files never become god files. Tauri/Rust command handlers are grouped
+by domain. `scripts/check_architecture.py` and `scripts/check_hygiene.py` enforce these bounds on
+host Rust and TypeScript sources as well as engine sources.
+
 ## Documentation policy
 
 Every permanent document must have one durable owner/responsibility. Prefer updating a canonical
@@ -143,6 +149,10 @@ cargo doc --workspace --no-deps
 python scripts/check_architecture.py
 python scripts/check_hygiene.py
 ```
+
+When reference hosts are present, run the equivalent commands in the `apps/` workspace plus the
+frontend gates (`npm ci && npm run build && npm test`). Host Rust gates require the frontend to be
+built first because the Tauri context embeds `apps/graphene-tauri/dist`.
 
 A gate that cannot run is `NOT RUN`, with the concrete reason recorded. A failing durable test is
 not deleted simply to obtain a green result.
