@@ -65,7 +65,15 @@ async fn engine_info_reports_the_resolved_data_root() {
     let state = build_state(root.path()).await;
     let info = commands::engine::info(&state);
 
-    assert_eq!(info.data_root, root.path().display().to_string());
+    // The engine canonicalizes the resolved data root (macOS temp dirs resolve through `/private`).
+    assert_eq!(
+        info.data_root,
+        root.path()
+            .canonicalize()
+            .expect("canonical root")
+            .display()
+            .to_string()
+    );
     assert!(!info.os.is_empty());
 }
 

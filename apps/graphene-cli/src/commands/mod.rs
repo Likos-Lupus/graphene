@@ -18,40 +18,30 @@ use std::future::Future;
 
 /// Awaits an operation future while rendering bounded progress and honoring Ctrl+C.
 ///
-/// On interrupt the handle is cancelled and the operation is allowed to finish cooperatively so it
-/// never leaves a half-terminal operation behind.
+/// The interrupt token is installed by the executable at startup, so an interrupt that arrives
+/// before or during engine construction is still honored. On interrupt the handle is cancelled and
+/// the operation is allowed to finish cooperatively so it never leaves a half-terminal operation.
 pub async fn await_operation<T, F>(
+    context: &AppContext,
     handle: OperationHandle,
     future: F,
-    show_progress: bool,
 ) -> Result<T, GrapheneError>
 where
     F: Future<Output = Result<T, GrapheneError>>,
 {
-    let progress = if show_progress {
-        Some(tokio::spawn(forward_progress(handle.clone())))
-    } else {
+    let progress = if context.output.is_json() {
         None
+    } else {
+        Some(tokio::spawn(forward_progress(handle.clone())))
     };
 
     tokio::pin!(future);
     let outcome = tokio::select! {
         result = &mut future => result,
-        signal = tokio::signal::ctrl_c() => {
+        () = context.interrupt.cancelled() => {
             handle.cancel();
-            match signal {
-                Ok(()) => {
-                    let _ = future.await;
-                    Err(cancelled())
-                }
-
-                Err(source) => Err(GrapheneError::new(
-                    ErrorCode::OperationCancelled,
-                    ErrorKind::Cancelled,
-                    "interrupt handler failed",
-                )
-                .with_source(source)),
-            }
+            let _ = future.await;
+            Err(cancelled())
         }
     };
 
@@ -72,11 +62,6 @@ async fn forward_progress(handle: OperationHandle) {
             _ => {}
         }
     }
-}
-
-#[must_use]
-pub fn progress_enabled(context: &AppContext) -> bool {
-    !context.output.is_json()
 }
 
 pub fn parse_instance(value: &str) -> Result<InstanceId, GrapheneError> {

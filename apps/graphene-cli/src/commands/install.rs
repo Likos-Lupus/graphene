@@ -1,5 +1,5 @@
 use crate::cli::{InstallArgs, InstallCommand};
-use crate::commands::{await_operation, loader_selection, progress_enabled};
+use crate::commands::{await_operation, loader_selection};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{ComponentInstallRequest, GrapheneError, InstallPlanOperation, InstallRequest};
@@ -29,12 +29,11 @@ async fn run_plan(
     operation: InstallPlanOperation,
 ) -> Result<Rendered, GrapheneError> {
     let handle = operation.operation();
-    let plan = await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let plan = await_operation(context, handle, operation.await_result()).await?;
 
     let execute = context.engine.install().execute(plan);
     let handle = execute.operation();
-    let committed =
-        await_operation(handle, execute.await_result(), progress_enabled(context)).await?;
+    let committed = await_operation(context, handle, execute.await_result()).await?;
 
     let human = vec![
         format!("instance: {}", committed.descriptor.instance_id),

@@ -1,5 +1,5 @@
 use crate::cli::{InstanceArgs, InstanceCommand, InstanceConfigArgs, InstanceConfigCommand};
-use crate::commands::{await_operation, parse_instance, progress_enabled};
+use crate::commands::{await_operation, parse_instance};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{CloneRequest, DeleteOptions, GrapheneError, RepairOptions, VerificationMode};
@@ -72,8 +72,7 @@ async fn verify(
     };
     let operation = context.engine.instances().verify(id, mode);
     let handle = operation.operation();
-    let report =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let report = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("healthy: {}", report.is_healthy()),
         format!("repairability: {:?}", report.repairability),
@@ -111,8 +110,7 @@ async fn repair(
 
     let operation = context.engine.instances().execute_repair(plan);
     let handle = operation.operation();
-    let result =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let result = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("executed_actions: {}", result.executed_actions_count),
         format!("healthy: {}", result.post_verify_report.is_healthy()),
@@ -131,7 +129,7 @@ async fn clone(
     let operation = context.engine.instances().clone(id, request);
     let handle = operation.operation();
 
-    await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    await_operation(context, handle, operation.await_result()).await?;
     Ok(Rendered::new(
         vec![format!("cloned {instance_id} to new instance '{name}'")],
         serde_json::json!({ "destination_display_name": name }),
@@ -143,7 +141,7 @@ async fn delete(context: &AppContext, instance_id: &str) -> Result<Rendered, Gra
     let operation = context.engine.instances().delete(id, DeleteOptions {});
     let handle = operation.operation();
 
-    await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    await_operation(context, handle, operation.await_result()).await?;
     Ok(Rendered::new(
         vec![format!("deleted instance {instance_id}")],
         serde_json::json!({ "instance_id": instance_id }),

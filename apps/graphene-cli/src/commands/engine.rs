@@ -1,5 +1,5 @@
 use crate::cli::{EngineArgs, EngineCommand};
-use crate::commands::{await_operation, progress_enabled};
+use crate::commands::await_operation;
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::GrapheneError;
@@ -55,7 +55,7 @@ async fn synthetic(
         kinds
     });
 
-    await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    await_operation(context, handle, operation.await_result()).await?;
     let events = collector.await.unwrap_or_default();
     let human = vec![format!(
         "synthetic operation completed ({} events)",

@@ -1,5 +1,5 @@
 use crate::cli::{ContentArgs, ContentCommand};
-use crate::commands::{await_operation, parse_instance, progress_enabled, provider_id};
+use crate::commands::{await_operation, parse_instance, provider_id};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{
@@ -48,8 +48,7 @@ async fn scan(
     let id = parse_instance(instance_id)?;
     let operation = context.engine.content().scan(id, hashes);
     let handle = operation.operation();
-    let inventory =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let inventory = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("files: {}", inventory.files.len()),
         format!("duplicate_mod_ids: {}", inventory.duplicate_mod_ids.len()),
@@ -78,7 +77,7 @@ async fn search(
         .content()
         .search(&provider_id(provider), &query);
     let handle = operation.operation();
-    let page = await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let page = await_operation(context, handle, operation.await_result()).await?;
     let human = page
         .hits
         .iter()
@@ -91,8 +90,7 @@ async fn recognize(context: &AppContext, instance_id: &str) -> Result<Rendered, 
     let id = parse_instance(instance_id)?;
     let operation = context.engine.content().recognize(id);
     let handle = operation.operation();
-    let result =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let result = await_operation(context, handle, operation.await_result()).await?;
     let value = Rendered::value(&result);
     Ok(Rendered::new(pretty_lines(&value), value))
 }
@@ -113,7 +111,7 @@ async fn install(
     );
     let operation = context.engine.content().plan(&request);
     let handle = operation.operation();
-    let plan = await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let plan = await_operation(context, handle, operation.await_result()).await?;
 
     if !execute {
         return Ok(Rendered::new(
@@ -124,8 +122,7 @@ async fn install(
 
     let operation = context.engine.content().execute(plan);
     let handle = operation.operation();
-    let result =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let result = await_operation(context, handle, operation.await_result()).await?;
 
     Ok(execution_rendered(&result))
 }
@@ -141,7 +138,7 @@ async fn update(
         .content()
         .plan_updates(id, ReleaseChannelPolicy::default());
     let handle = operation.operation();
-    let plan = await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let plan = await_operation(context, handle, operation.await_result()).await?;
 
     if !execute {
         return Ok(Rendered::new(
@@ -152,8 +149,7 @@ async fn update(
 
     let operation = context.engine.content().execute(plan);
     let handle = operation.operation();
-    let result =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let result = await_operation(context, handle, operation.await_result()).await?;
 
     Ok(execution_rendered(&result))
 }

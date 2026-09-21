@@ -1,5 +1,5 @@
 use crate::cli::{AccountArgs, AccountCommand};
-use crate::commands::{await_operation, parse_account, progress_enabled};
+use crate::commands::{await_operation, parse_account};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{GrapheneError, MicrosoftLoginOperation, OfflineAccountSpec};
@@ -59,8 +59,7 @@ async fn finish_login(
     crate::interaction::emit(context.output, operation.interaction());
 
     let handle = operation.operation();
-    let account =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let account = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("id: {}", account.id),
         format!("display_name: {}", account.profile.display_name),

@@ -1,5 +1,5 @@
 use crate::cli::{ModpackArgs, ModpackCommand};
-use crate::commands::{await_operation, parse_instance, progress_enabled};
+use crate::commands::{await_operation, parse_instance};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{
@@ -38,8 +38,7 @@ fn pack_source(source: &str) -> PackSource {
 async fn inspect(context: &AppContext, source: &str) -> Result<Rendered, GrapheneError> {
     let operation = context.engine.modpacks().inspect(pack_source(source));
     let handle = operation.operation();
-    let inspection =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let inspection = await_operation(context, handle, operation.await_result()).await?;
     let value = Rendered::value(&inspection);
     let human = vec![
         format!("required_files: {}", value["required_file_count"]),
@@ -61,8 +60,7 @@ async fn import(
 ) -> Result<Rendered, GrapheneError> {
     let operation = context.engine.modpacks().inspect(pack_source(source));
     let handle = operation.operation();
-    let inspection =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let inspection = await_operation(context, handle, operation.await_result()).await?;
 
     let request = ModpackImportRequest {
         snapshot: inspection.snapshot().clone(),
@@ -71,7 +69,7 @@ async fn import(
     };
     let operation = context.engine.modpacks().plan_import(request);
     let handle = operation.operation();
-    let plan = await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let plan = await_operation(context, handle, operation.await_result()).await?;
 
     if !execute {
         return Ok(Rendered::new(
@@ -89,8 +87,7 @@ async fn import(
 
     let operation = context.engine.modpacks().execute_import(plan);
     let handle = operation.operation();
-    let committed =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let committed = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("instance: {}", committed.descriptor.instance_id),
         format!("name: {}", committed.descriptor.display_name),
@@ -117,12 +114,11 @@ async fn export(
     )?;
     let operation = context.engine.modpacks().plan_export(request);
     let handle = operation.operation();
-    let plan = await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let plan = await_operation(context, handle, operation.await_result()).await?;
 
     let operation = context.engine.modpacks().execute_export(plan);
     let handle = operation.operation();
-    let result =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let result = await_operation(context, handle, operation.await_result()).await?;
 
     let human = vec![
         format!("output: {}", result.output.display()),

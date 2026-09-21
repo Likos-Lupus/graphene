@@ -281,3 +281,22 @@ async fn host_build_rejects_a_non_directory_data_root() {
         .await;
     assert!(result.is_err());
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn data_root_is_canonicalized_when_supplied_through_a_symlink() {
+    let real = tempfile::tempdir().expect("real root");
+    let link_parent = tempfile::tempdir().expect("link parent");
+    let link = link_parent.path().join("linked-root");
+    std::os::unix::fs::symlink(real.path(), &link).expect("create symlink");
+
+    let engine = build_graphene(&link).await;
+
+    // The engine canonicalizes the resolved data root; this reproduces the macOS
+    // `/var` -> `/private/var` normalization on a Linux runner.
+    assert_eq!(
+        engine.data_root(),
+        real.path().canonicalize().expect("canonical real root")
+    );
+    assert_ne!(engine.data_root(), link.as_path());
+}

@@ -1,5 +1,5 @@
 use crate::cli::{DiagnoseArgs, DiagnosticModeArg};
-use crate::commands::{await_operation, parse_instance, progress_enabled};
+use crate::commands::{await_operation, parse_instance};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{DiagnosticReport, DiagnosticRequest, GrapheneError, ProcessExitEvidence};
@@ -9,8 +9,7 @@ pub async fn dispatch(context: &AppContext, args: DiagnoseArgs) -> Result<Render
     let request = build_request(args.mode, args.exit_code);
     let operation = context.engine.diagnostics().analyze(id, request);
     let handle = operation.operation();
-    let report =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let report = await_operation(context, handle, operation.await_result()).await?;
     let human = report_human(&report);
     Ok(Rendered::new(human, Rendered::value(&report)))
 }

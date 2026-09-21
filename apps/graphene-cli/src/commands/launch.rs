@@ -1,5 +1,5 @@
 use crate::cli::{LaunchArgs, LaunchCommand};
-use crate::commands::{await_operation, parse_account, parse_instance, progress_enabled};
+use crate::commands::{await_operation, parse_account, parse_instance};
 use crate::context::AppContext;
 use crate::error::cancelled;
 use crate::output::Rendered;
@@ -99,8 +99,7 @@ async fn build_plan(
 
     let session = context.engine.accounts().launch_session(account_id);
     let handle = session.operation();
-    let session: LaunchSession =
-        await_operation(handle, session.await_result(), progress_enabled(context)).await?;
+    let session: LaunchSession = await_operation(context, handle, session.await_result()).await?;
 
     let request = LaunchRequest::new(id, session);
     context.engine.launch().plan(request).await

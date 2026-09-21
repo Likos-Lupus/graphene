@@ -1,5 +1,5 @@
 use crate::cli::{JavaArgs, JavaCommand};
-use crate::commands::{await_operation, parse_instance, progress_enabled};
+use crate::commands::{await_operation, parse_instance};
 use crate::context::AppContext;
 use crate::output::Rendered;
 use graphene::{GrapheneError, JavaRequirement};
@@ -37,8 +37,7 @@ async fn ensure(context: &AppContext, instance_id: &str) -> Result<Rendered, Gra
     let id = parse_instance(instance_id)?;
     let operation = context.engine.java().ensure_for_instance(id, None);
     let handle = operation.operation();
-    let runtime =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let runtime = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("major: {}", runtime.major_version),
         format!("version: {}", runtime.version),
@@ -55,8 +54,7 @@ async fn install(context: &AppContext, major: u32) -> Result<Rendered, GrapheneE
     };
     let operation = context.engine.java().install_managed(requirement);
     let handle = operation.operation();
-    let runtime =
-        await_operation(handle, operation.await_result(), progress_enabled(context)).await?;
+    let runtime = await_operation(context, handle, operation.await_result()).await?;
     let human = vec![
         format!("major: {}", runtime.major_version),
         format!("version: {}", runtime.version),

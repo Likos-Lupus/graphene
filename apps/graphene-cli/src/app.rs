@@ -4,7 +4,7 @@ use crate::context::AppContext;
 use crate::error::{ErrorBody, exit_code};
 use crate::output::{OutputMode, print_error, print_success};
 use clap::Parser;
-use graphene::{ErrorCode, ErrorKind, GrapheneError};
+use graphene::{CancellationToken, ErrorCode, ErrorKind, GrapheneError};
 use graphene_reference_host_support::{HostConfig, KeyringSecretStore, init_tracing};
 use std::sync::Arc;
 
@@ -42,11 +42,22 @@ fn run(cli: Cli, mode: OutputMode) -> Result<(), GrapheneError> {
 }
 
 async fn dispatch(cli: Cli, mode: OutputMode) -> Result<(), GrapheneError> {
+    // Install the interrupt handler before engine construction so Ctrl+C during startup is honored
+    // and converted into cooperative operation cancellation.
+    let interrupt = CancellationToken::new();
+    let listener = interrupt.clone();
+    tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            listener.cancel();
+        }
+    });
+
     let config = HostConfig::from_env(cli.data_root)?;
     let engine = config.build(Arc::new(KeyringSecretStore::new())).await?;
     let context = AppContext {
         engine,
         output: mode,
+        interrupt,
     };
 
     let rendered = match cli.command {
